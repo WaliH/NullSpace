@@ -5,6 +5,7 @@
 // Both return the same JSON shape: { meta, astronauts, vitals, readings }.
 const DATA_SOURCES = ['/api/telemetry', 'data.json'];
 const LIVE_POLL_MS = 5000;    // how often the backend is asked for new watch readings
+const LIVE_FRESH_MS = 2 * 60 * 1000;  // watch data older than this is ignored: back to the demo baseline
 const ALERTS_URL = '/api/alerts';
 const ACK_OPERATOR = 'Mission Control';  // name stored with each acknowledgment
 const ALERT_LOG_ROWS = 6;     // alerts shown in the archive panel
@@ -46,6 +47,7 @@ let VITALS = {};              // vital_id -> vital row
 let SCENARIO_SERIES = {};     // astronaut_id -> vital_id -> readings sorted by time
 let LIVE_SERIES = {};
 let LIVE_LATEST_TIME = null;  // time of the newest watch reading, or null
+let SERVER_NOW = null;        // server clock (meta.generated_at), so a wrong PC clock does not matter
 let dataSource = null;        // which entry of DATA_SOURCES answered
 let mode = 'scenario';        // 'scenario' | 'live'
 let ALERTS = [];              // from GET /api/alerts (empty without the backend)
@@ -91,25 +93,54 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Live watch data when there is some, otherwise the day 1 baseline of the scenario.
+// True when the watch sent something recently. Old test readings left in the database
+// must not replace the demo baseline forever.
+function liveIsFresh() {
+  if (!LIVE_LATEST_TIME) return false;
+  const now = Date.parse(SERVER_NOW || new Date().toISOString());
+  return now - Date.parse(LIVE_LATEST_TIME) <= LIVE_FRESH_MS;
+}
+
+// Live watch data when the watch is currently sending, otherwise the day 1 baseline of the scenario.
 function showDefaultView() {
-  mode = LIVE_LATEST_TIME ? 'live' : 'scenario';
+  mode = liveIsFresh() ? 'live' : 'scenario';
   currentTime = mode === 'live' ? LIVE_LATEST_TIME : BASELINE_TIME;
+  updateModePill(mode);
   renderVitals();
+}
+
+function updateModePill(state) {
+  const pill = document.getElementById('mode-pill');
+  if (!pill) return;
+  const labels = { live: 'Live Watch Downlink', scenario: 'Mission Baseline · Demo Data', replay: 'Solar Event Replay · Demo Data' };
+  pill.textContent = labels[state];
+  pill.classList.toggle('mode-live', state === 'live');
+  pill.classList.toggle('mode-replay', state === 'replay');
 }
 
 // Asks the backend for new watch readings. Paused while the solar-event replay is on screen.
 async function pollLive() {
   if (isCrisisActive) return;
   const previousLatest = LIVE_LATEST_TIME;
+  const previousMode = mode;
   try {
     await loadData();
   } catch (err) {
     console.warn('Live poll failed', err);
     return;
   }
-  if (isCrisisActive || LIVE_LATEST_TIME === previousLatest) return;
+  if (isCrisisActive) return;
+
+  const newPacket = LIVE_LATEST_TIME !== previousLatest;
+  const nextMode = liveIsFresh() ? 'live' : 'scenario';
+  if (!newPacket && nextMode === previousMode) return;
+
   showDefaultView();
-  updateTerminalFeed(`${LIVE_LATEST_TIME.slice(11, 19)} UTC — watch packet received from the crew.`);
+  if (mode === 'live') {
+    updateTerminalFeed(`${LIVE_LATEST_TIME.slice(11, 19)} UTC — watch packet received from the crew.`);
+  } else if (previousMode === 'live') {
+    updateTerminalFeed(`Watch downlink silent for over ${LIVE_FRESH_MS / 60000} min — back to mission baseline ${formatTime(currentTime)}.`);
+  }
 }
 
 // ---------- Data ----------
@@ -159,6 +190,7 @@ async function loadData() {
   SCENARIO_SERIES = groupSeries(scenario);
   LIVE_SERIES = groupSeries(live);
   LIVE_LATEST_TIME = live.length ? live.map(r => r.recorded_at).sort().pop() : null;
+  SERVER_NOW = (DATA.meta && DATA.meta.generated_at) || null;
 
   ALERTS = hasBackend() ? await fetchAlerts() : [];
 
@@ -777,6 +809,7 @@ window.simulateSolarFlareCrisis = function () {
   isCrisisActive = true;
   mode = 'scenario';
   currentTime = BASELINE_TIME;
+  updateModePill('replay');
   inspectedNodes.clear();
   setupInteractiveBodyNodes();
   setFlareButton('replaying');

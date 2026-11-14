@@ -8,6 +8,8 @@
 //   php bin/simulate-watch.php --crisis=all    → both at the same time
 //   php bin/simulate-watch.php --interval=2 --count=10 --url=http://localhost:8787
 //
+// One batch = one mission hour. Solar eruption (radiation) during batches 30-36.
+//
 // Stop with Ctrl+C. Needs only PHP (no curl extension required).
 
 $config = require __DIR__ . '/../config.php';
@@ -35,6 +37,12 @@ $daily = [
     'AST-01' => ['sleep_hours' => 7.3, 'bone_load' => 75, 'radiation_dose' => 0.6],
     'AST-02' => ['sleep_hours' => 7.6, 'bone_load' => 80, 'radiation_dose' => 0.62],
 ];
+// Solar eruption during batches 30-36 (one batch = one mission hour): radiation added to the
+// daily dose each hour (warning above 1 mSv/day, critical above 2).
+const FLARE_START = 30;
+const FLARE_END = 36;
+const FLARE_DOSE = [0.10, 0.22, 0.35, 0.42, 0.35, 0.22, 0.14];
+$dose = array_map(fn($d) => $d['radiation_dose'], $daily);
 // Allowed range for the random walk in nominal mode.
 $bounds = [
     'heart_rate' => [60, 85, 2], 'systolic_bp' => [105, 130, 2], 'diastolic_bp' => [65, 82, 1.5],
@@ -97,6 +105,12 @@ for ($i = 0; $count === 0 || $i < $count; $i++) {
             foreach ($daily[$astro] as $vital => $v) {
                 $readings[] = ['vital_id' => $vital, 'value' => $v];
             }
+        }
+        // Solar eruption (batch = mission hour 30-36): the daily radiation dose rises every hour.
+        // Same values as sensor-cpp/simulator.cpp.
+        if ($i >= FLARE_START && $i <= FLARE_END) {
+            $dose[$astro] += FLARE_DOSE[$i - FLARE_START];
+            $readings[] = ['vital_id' => 'radiation_dose', 'value' => round($dose[$astro], 2)];
         }
 
         [$code, $res] = post_json("$baseUrl/api/readings", [

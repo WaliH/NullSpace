@@ -3,3 +3,6 @@ data/*.sqlite
 data/*.sqlite-journal
 data/*.sqlite-wal
 data/*.sqlite-shm
+
+# PID of the watch simulator started from the dashboard
+data/simulator.json

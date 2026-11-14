@@ -54,6 +54,18 @@ simulate-watch.bat --count=10          s'arrête après 10 envois
 
 Pour revenir aux seules données de démonstration : `seed.bat --reset` (efface les mesures de la montre).
 
+### Depuis le site (bouton « Live Watch Simulator »)
+
+Sous le bouton « Simulate Solar Flare », le panneau **Live Watch Simulator** lance le simulateur sans terminal : choisissez la crise (les deux astronautes, Alpha, Bravo ou aucune), puis cliquez sur **▶ Run**. Le serveur PHP démarre alors en arrière-plan :
+- `sensor-cpp\simulator.exe` s'il a été compilé (`sensor-cpp\build.bat`) ;
+- sinon le simulateur PHP (`bin\simulate-watch.php`), qui envoie exactement les mêmes valeurs.
+
+Le simulateur envoie un paquet toutes les 3 s et s'arrête tout seul au bout de 2 minutes, ou quand on clique sur **■ Stop**. Le tableau de bord passe en mode live dès les premiers paquets.
+
+- Le bouton ne fonctionne que sur le PC qui fait tourner le serveur (`localhost`) : une page ouverte depuis un autre appareil ne peut pas lancer de programme sur la machine.
+- Sous Windows, le lancement passe par PowerShell (`Start-Process`) et l'arrêt par `taskkill`. Le numéro du processus est gardé dans `data\simulator.json`.
+- Routes : `GET /api/simulator` (état), `POST /api/simulator/start` avec `{"crisis": "all" | "alpha" | "bravo" | "none"}`, `POST /api/simulator/stop`.
+
 ## 4. L'API
 
 | Méthode | URL | Rôle |
@@ -117,6 +129,7 @@ backend-php/
   src/db.php             base SQLite, création des tables, calcul des statuts
   src/api.php            les routes de l'API
   src/alerts.php         création, regroupement et liste des alertes
+  src/simulator.php      lancement / arrêt du simulateur de montre depuis le site
   bin/seed.php           import de data.json
   bin/simulate-watch.php simulateur de montre
   data/                  la base aurawatch.sqlite (non versionnée)

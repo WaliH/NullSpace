@@ -7,6 +7,7 @@ const DATA_SOURCES = ['/api/telemetry', 'data.json'];
 const LIVE_POLL_MS = 5000;    // how often the backend is asked for new watch readings
 const LIVE_FRESH_MS = 2 * 60 * 1000;  // watch data older than this is ignored: back to the demo baseline
 const ALERTS_URL = '/api/alerts';
+const SIMULATOR_URL = '/api/simulator';
 const ACK_OPERATOR = 'Mission Control';  // name stored with each acknowledgment
 const ALERT_LOG_ROWS = 6;     // alerts shown in the archive panel
 
@@ -54,6 +55,7 @@ let dataSource = null;        // which entry of DATA_SOURCES answered
 let mode = 'scenario';        // 'scenario' | 'live'
 let ALERTS = [];              // from GET /api/alerts (empty without the backend)
 let activeModalAlertId = null;
+let simState = null;          // from GET /api/simulator
 let ASTRO_BY_PROFILE = {};    // 'male' | 'female' -> astronaut row
 let BASELINE_TIME = null;     // last hour of day 1
 let REPLAY_TIMES = [];        // every hour of the last day
@@ -73,6 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupInteractiveBodyNodes();
   setupModalEvents();
   setupAlertLogEvents();
+  setupWatchSimulator();
 
   try {
     await loadData();
@@ -91,7 +94,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       : `Telemetry synchronized (${origin}) — ${DATA.astronauts.length} crew nodes online. Last sync ${formatTime(currentTime)}.`
   );
 
-  if (dataSource !== 'data.json') setInterval(pollLive, LIVE_POLL_MS);
+  if (dataSource !== 'data.json') {
+    setInterval(pollLive, LIVE_POLL_MS);
+    refreshSimulatorStatus();
+  }
 });
 
 // Live watch data when there is some, otherwise the day 1 baseline of the scenario.
@@ -122,6 +128,7 @@ function updateModePill(state) {
 
 // Asks the backend for new watch readings. Paused while the solar-event replay is on screen.
 async function pollLive() {
+  refreshSimulatorStatus();
   if (isCrisisActive) return;
   const previousLatest = LIVE_LATEST_TIME;
   const previousMode = mode;
@@ -798,6 +805,86 @@ async function acknowledgeAlert(id) {
     updateTerminalFeed(`ACK FAILED for alert #${id}: ${err.message}`, true);
   }
   renderAlertLog();
+}
+
+// ---------- Live watch simulator (backend only) ----------
+// The button asks the PHP server to run sensor-cpp/simulator.exe (or the PHP simulator if the
+// .exe has not been built). The simulator then sends readings to the API like a real watch,
+// and pollLive() switches the dashboard to live mode.
+
+async function refreshSimulatorStatus() {
+  if (!hasBackend()) return;
+  try {
+    const res = await fetch(SIMULATOR_URL, { cache: 'no-store' });
+    if (res.ok) simState = await res.json();
+  } catch (err) {
+    console.warn('Simulator status unavailable', err);
+  }
+  renderWatchSimulator();
+}
+
+function renderWatchSimulator() {
+  const panel = document.getElementById('watch-sim');
+  const btn = document.getElementById('btn-watch-sim');
+  const select = document.getElementById('watch-sim-crisis');
+  const status = document.getElementById('watch-sim-status');
+  if (!panel || !btn) return;
+
+  panel.classList.toggle('hidden', !hasBackend() || !simState);
+  if (!simState) return;
+
+  const running = !!simState.running;
+  btn.classList.toggle('running', running);
+  btn.innerHTML = running ? '&#9632; Stop' : '&#9654; Run';
+  if (select) {
+    select.disabled = running;
+    if (running && simState.crisis) select.value = simState.crisis;
+  }
+  if (status) {
+    if (running) {
+      const engine = simState.engine === 'cpp' ? 'C++ simulator.exe' : 'PHP simulator (simulator.exe not built)';
+      status.textContent = `RUNNING · ${engine} · crisis: ${simState.crisis} · since ${simState.started_at.slice(11, 19)} UTC`;
+    } else {
+      status.textContent = simState.cpp_available
+        ? 'Ready · engine: C++ simulator.exe'
+        : 'Ready · simulator.exe not built (sensor-cpp\\build.bat): the PHP simulator will be used';
+    }
+  }
+}
+
+function setupWatchSimulator() {
+  const btn = document.getElementById('btn-watch-sim');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    const running = simState && simState.running;
+    btn.disabled = true;
+    try {
+      if (!running && isCrisisActive) window.simulateSolarFlareCrisis();  // leave the replay first
+
+      const crisis = document.getElementById('watch-sim-crisis').value;
+      const res = await fetch(`${SIMULATOR_URL}/${running ? 'stop' : 'start'}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ crisis })
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      simState = json;
+
+      if (running) {
+        updateTerminalFeed('Watch simulator stopped — dashboard returns to the mission baseline after 2 min of silence.');
+      } else {
+        const engine = json.engine === 'cpp' ? 'C++ simulator.exe' : 'PHP simulator';
+        updateTerminalFeed(`Watch simulator started (${engine}, crisis: ${crisis}) — waiting for the first packets...`);
+        setTimeout(pollLive, 2500);
+      }
+    } catch (err) {
+      console.error(err);
+      updateTerminalFeed(`WATCH SIMULATOR ERROR: ${err.message}`, true);
+    }
+    btn.disabled = false;
+    renderWatchSimulator();
+  });
 }
 
 // ---------- Terminal ----------

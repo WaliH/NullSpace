@@ -7,8 +7,10 @@
 //   POST /api/readings    → the watch sends its measurements (header X-Device-Key required)
 //   GET  /api/alerts      → alerts, newest first. Filters: ?state=open|acknowledged|all&astronaut_id=&source=&limit=
 //   POST /api/alerts/{id}/ack → mission control acknowledges an alert: {"acknowledged_by": "...", "note": "..."}
+//   GET  /api/simulator, POST /api/simulator/start, POST /api/simulator/stop → watch simulator (src/simulator.php)
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/simulator.php';
 
 function aura_send_json(int $code, $payload): void
 {
@@ -49,6 +51,15 @@ function aura_handle_api(string $method, string $path): void
                 break;
             case 'POST /api/readings':
                 aura_api_post_readings();
+                break;
+            case 'GET /api/simulator':
+                aura_api_simulator('status');
+                break;
+            case 'POST /api/simulator/start':
+                aura_api_simulator('start');
+                break;
+            case 'POST /api/simulator/stop':
+                aura_api_simulator('stop');
                 break;
             case 'GET /api/alerts':
                 aura_send_json(200, ['alerts' => aura_list_alerts(aura_db(), $_GET)]);

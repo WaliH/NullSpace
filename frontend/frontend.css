@@ -409,6 +409,41 @@ body {
   height: 24px;
 }
 
+.spark-seg {
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.spark-seg.warning {
+  stroke: var(--state-warning);
+}
+
+.spark-seg.critical {
+  stroke: var(--state-critical);
+}
+
+.profile-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+  background: var(--state-nominal);
+}
+
+.profile-dot[data-status="warning"] {
+  background: var(--state-warning);
+  box-shadow: 0 0 6px var(--state-warning);
+}
+
+.profile-dot[data-status="critical"] {
+  background: var(--state-critical);
+  box-shadow: 0 0 8px var(--state-critical);
+  animation: badgeBlink 1.5s infinite;
+}
+
 .sparkline-track {
   fill: none;
   stroke: rgba(255, 255, 255, 0.2);

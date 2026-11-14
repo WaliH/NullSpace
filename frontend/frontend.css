@@ -149,6 +149,18 @@ body {
   background: rgba(255, 255, 255, 0.03);
 }
 
+.pill-status.mode-live {
+  color: var(--state-nominal);
+  border-color: var(--state-nominal-border);
+  background: var(--state-nominal-bg);
+}
+
+.pill-status.mode-replay {
+  color: var(--state-warning);
+  border-color: var(--state-warning-border);
+  background: var(--state-warning-bg);
+}
+
 .subtitle {
   font-size: 0.8rem;
   color: var(--text-muted);

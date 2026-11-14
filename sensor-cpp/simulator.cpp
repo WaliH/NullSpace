@@ -174,7 +174,7 @@ const Vital VITALS[] = {
     {"body_temp",      "Body Temperature",  "C",       35,  36.5, 37.5, 38.3},
     {"sleep_hours",    "Sleep Duration",    "hours",   5,   7,    NAN,  NAN},
     {"bone_load",      "Bone-Loss Exercise","min/day", 30,  60,   NAN,  NAN},
-    {"radiation_dose", "Radiation Dose",    "mSv/day", NAN, NAN,  1,    2},
+    {"radiation_dose", "Radiation Dose",    "mSv/day", NAN, NAN,  1.3,  1.8},  // NASA-STD-3001 / Curiosity RAD
 };
 
 const Vital* find_vital(const std::string& id) {
@@ -328,7 +328,7 @@ public:
         }
 
         // Solar eruption: the whole crew is exposed, the daily dose rises every hour
-        // (warning above 1 mSv/day, critical above 2) and stays at its new level afterwards.
+        // (warning above 1.3 mSv/day, critical above 1.8) and stays at its new level afterwards.
         if (hour >= FLARE_START && hour <= FLARE_END) {
             dose_ += FLARE_DOSE[hour - FLARE_START];
             out.push_back({"radiation_dose", round_to(dose_, 2)});

@@ -5,7 +5,7 @@
 Sujet : logiciel de suivi de santé pour astronautes en mission spatiale.
 Concept : une montre (projet AURA) mesure les constantes de l'astronaute et les envoie vers la Terre ; toute la surveillance se fait sur un site web (tableau de bord « AURA // HRP·OS »).
 
-Toutes les données sont **simulées** pour la démo. Les seuils sont **illustratifs**, ce ne sont **pas** des limites officielles NASA — ne jamais les présenter comme tels.
+Toutes les données sont **simulées** pour la démo. Les seuils sont **illustratifs**, ce ne sont **pas** des limites officielles NASA — ne jamais les présenter comme tels. **Exception : la radiation** (warning > 1,3 mSv/jour = valeur de conception NASA-STD-3001 pour le GCR en espace libre ; critique > 1,8 mSv/jour = moyenne mesurée par Curiosity/RAD vers Mars → éruption solaire probable). Ces seuils sont « dérivés de références NASA », pas des règles opérationnelles. Ils sont dans `data.json` (`threshold_source`), `simulator.cpp` (`VITALS`) et le README : les garder identiques.
 
 ## Structure du dépôt (github.com/WaliH/NullSpace)
 ```
@@ -72,6 +72,7 @@ puis ouvrir http://localhost:8000 (ou l'extension Live Server de VS Code). Le si
 - Le « decision log » du replay donne la priorité aux changements de l'astronaute affiché.
 - Panneau « Live Watch Simulator » sous le bouton Solar Flare (seulement avec le backend) : choix de la crise + bouton Run/Stop, état rafraîchi à chaque `pollLive()`. Lancer le simulateur pendant le replay arrête d'abord le replay.
 - Panneau « Module 02 // Alert Archive » (seulement avec le backend) : uniquement l'astronaute affiché (l'en-tête résume les alertes ouvertes de l'autre) ; alertes `watch` en mode live, alertes `scenario` déjà survenues à l'heure affichée sinon. En mode scénario, `alertView()` recalcule pic, dernière valeur et nombre de mesures à `currentTime`, pour que le replay n'affiche jamais de valeurs futures. Le bouton du dialogue d'une carte accuse réception de l'alerte ouverte de cette carte.
+- Le dialogue d'une carte affiche aussi `threshold_source` de sa constante principale (« Thresholds: … »).
 - `HRP_LINKS` : pour chaque carte, le risque du NASA Human Research Program (nasa.gov/hrp/risks) et le danger (nasa.gov/hrp/hazards) correspondants, affichés dans le dialogue de la carte (bloc « Related NASA HRP Risk »). Le README (section « NASA and partner resources ») reprend ce tableau : les garder identiques.
 - `CARD_MAP` relie chaque carte de `index.html` (`data-metric-id`) aux constantes et au point chaud de la silhouette. La tension artérielle combine `systolic_bp` et `diastolic_bp`.
 - 7 cartes : fréquence cardiaque, tension, glycémie, température, exercice (`bone_load`), sommeil, radiation. La carte radiation (`radiation_dose`, classe `vital-card-wide`) occupe toute la dernière ligne de la grille.

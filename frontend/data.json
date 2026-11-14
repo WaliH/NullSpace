@@ -1,7 +1,7 @@
 {
  "meta": {
   "project": "Project AURA (Null Space)",
-  "notice": "All measurements are SIMULATED for the demo. Thresholds are illustrative, not NASA limits.",
+  "notice": "All measurements are SIMULATED for the demo. Thresholds are illustrative, not NASA limits, except the radiation thresholds, which are derived from NASA references (see vitals.radiation_dose.threshold_source).",
   "time_zone": "UTC",
   "source": "AuraWatch_data.xlsx (same content as schema.sql / seed.sql)"
  },
@@ -120,11 +120,11 @@
    "unit": "mSv/day",
    "critical_low": null,
    "warning_low": null,
-   "warning_high": 1,
-   "critical_high": 2,
+   "warning_high": 1.3,
+   "critical_high": 1.8,
    "nominal_message": "Radiation dose normal.",
-   "countermeasure": "Move to the shielded area and notify mission control.",
-   "threshold_source": "Illustrative prototype value - to be calibrated with NASA / CSA radiation data"
+   "countermeasure": "Move to the shielded area (storm shelter) and notify mission control.",
+   "threshold_source": "Derived from NASA references: warning above 1.3 mSv/day = NASA-STD-3001 design value for galactic cosmic radiation in free space; critical above 1.8 mSv/day = average GCR dose measured by Curiosity's RAD instrument in transit to Mars (Zeitlin et al., Science, 2013), so a higher daily dose points to a solar particle event. NASA-STD-3001 also limits exposure to 250 mSv per solar particle event and 600 mSv per career."
   }
  ],
  "readings": [

@@ -45,7 +45,9 @@ Avec le serveur lancé, double-cliquez sur **`simulate-watch.bat`**. Il envoie t
 
 Options (depuis un terminal) :
 ```
-simulate-watch.bat --crisis            la fréquence cardiaque et la tension de Bravo montent jusqu'au seuil critique
+simulate-watch.bat --crisis            Bravo (profil MALE) : fréquence cardiaque et tension montent jusqu'au critique
+simulate-watch.bat --crisis=alpha      Alpha (profil FEMALE) : fièvre, la température monte jusqu'au critique
+simulate-watch.bat --crisis=all        les deux crises en même temps
 simulate-watch.bat --interval=2        un envoi toutes les 2 secondes
 simulate-watch.bat --count=10          s'arrête après 10 envois
 ```

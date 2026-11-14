@@ -11,7 +11,9 @@
 //
 // Usage (the backend must be running: backend-php\start-server.bat):
 //   simulator.exe                         one batch every 5 s, nominal values, until Ctrl+C
-//   simulator.exe --crisis                Bravo's heart rate and blood pressure drift up to critical
+//   simulator.exe --crisis                Bravo: heart rate and blood pressure drift up to critical
+//   simulator.exe --crisis=alpha          Alpha: fever (temperature up to critical, heart rate up)
+//   simulator.exe --crisis=all            both at the same time
 //   simulator.exe --interval=2 --count=10
 //   simulator.exe --url=http://localhost:8787 --key=aura-demo-key
 
@@ -35,7 +37,8 @@ struct Options {
     std::string key = "aura-demo-key";      // same default as backend-php/config.php
     int interval_s = 5;
     int count = 0;                          // 0 = run until Ctrl+C
-    bool crisis = false;
+    bool crisis_alpha = false;              // AST-01: fever
+    bool crisis_bravo = false;              // AST-02: heart rate + blood pressure
 };
 
 void print_help() {
@@ -45,7 +48,9 @@ void print_help() {
         "  --key=KEY                device key, X-Device-Key header (default aura-demo-key)\n"
         "  --interval=N             seconds between two batches (default 5)\n"
         "  --count=N                number of batches, 0 = until Ctrl+C (default 0)\n"
-        "  --crisis                 Bravo's heart rate and blood pressure rise to critical\n";
+        "  --crisis                 Bravo (AST-02): heart rate and blood pressure rise to critical\n"
+        "  --crisis=alpha           Alpha (AST-01): fever, temperature rises to critical\n"
+        "  --crisis=all             both crises at the same time\n";
 }
 
 bool starts_with(const std::string& s, const std::string& prefix) {
@@ -75,7 +80,9 @@ bool parse_args(int argc, char** argv, Options& o) {
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
         if (a == "--help" || a == "-h") { print_help(); return false; }
-        else if (a == "--crisis") o.crisis = true;
+        else if (a == "--crisis" || a == "--crisis=bravo") o.crisis_bravo = true;
+        else if (a == "--crisis=alpha") o.crisis_alpha = true;
+        else if (a == "--crisis=all") o.crisis_alpha = o.crisis_bravo = true;
         else if (starts_with(a, "--url=")) { if (!parse_url(a.substr(6), o)) return false; }
         else if (starts_with(a, "--key=")) o.key = a.substr(6);
         else if (starts_with(a, "--interval=")) o.interval_s = std::max(1, std::atoi(a.c_str() + 11));
@@ -129,8 +136,13 @@ int main(int argc, char** argv) {
 
     aura::Client client(opt.host, opt.port, opt.key);
 
+    std::string mode;
+    if (opt.crisis_alpha && opt.crisis_bravo) mode = " (crisis: Alpha fever + Bravo cardiovascular)";
+    else if (opt.crisis_alpha) mode = " (crisis: Alpha fever)";
+    else if (opt.crisis_bravo) mode = " (crisis: Bravo cardiovascular)";
+
     std::cout << "Sending to http://" << opt.host << ':' << opt.port << "/api/readings every "
-              << opt.interval_s << "s" << (opt.crisis ? " (crisis mode)" : "") << ". Ctrl+C to stop.\n";
+              << opt.interval_s << "s" << mode << ". Ctrl+C to stop.\n";
 
     for (int i = 0; opt.count == 0 || i < opt.count; ++i) {
         const std::string time = aura::utc_now_iso();
@@ -141,9 +153,14 @@ int main(int argc, char** argv) {
                 double& v = astro.values[vital];
                 v = std::clamp(v + unit(rng) * b.step, b.min, b.max);
             }
-            if (opt.crisis && astro.id == "AST-02") {
+            // Crisis scenarios. Same values as backend-php/bin/simulate-watch.php.
+            if (opt.crisis_bravo && astro.id == "AST-02") {
                 astro.values["heart_rate"] = std::min(130.0, 88.0 + i * 6);
                 astro.values["systolic_bp"] = std::min(160.0, 128.0 + i * 5);
+            }
+            if (opt.crisis_alpha && astro.id == "AST-01") {
+                astro.values["body_temp"] = std::min(39.0, 37.2 + i * 0.25);
+                astro.values["heart_rate"] = std::min(105.0, 74.0 + i * 3);
             }
 
             std::vector<aura::Reading> readings;

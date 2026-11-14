@@ -3,18 +3,27 @@
 // Useful for the demo while the hardware (sensor-cpp/) is not ready.
 //
 //   php bin/simulate-watch.php                 → one batch every 5 s, nominal values
-//   php bin/simulate-watch.php --crisis        → Bravo's heart rate and blood pressure drift up
+//   php bin/simulate-watch.php --crisis        → Bravo: heart rate and blood pressure drift up to critical
+//   php bin/simulate-watch.php --crisis=alpha  → Alpha: fever (temperature up to critical, heart rate up)
+//   php bin/simulate-watch.php --crisis=all    → both at the same time
 //   php bin/simulate-watch.php --interval=2 --count=10 --url=http://localhost:8787
 //
 // Stop with Ctrl+C. Needs only PHP (no curl extension required).
 
 $config = require __DIR__ . '/../config.php';
 
-$opts = getopt('', ['url::', 'interval::', 'count::', 'crisis']);
+$opts = getopt('', ['url::', 'interval::', 'count::', 'crisis::']);
 $baseUrl = rtrim($opts['url'] ?? ('http://localhost:' . $config['port']), '/');
 $interval = max(1, (int) ($opts['interval'] ?? 5));
 $count = (int) ($opts['count'] ?? 0); // 0 = run until Ctrl+C
-$crisis = array_key_exists('crisis', $opts);
+// --crisis alone (getopt gives false) means Bravo.
+$crisisArg = array_key_exists('crisis', $opts) ? ($opts['crisis'] === false ? 'bravo' : strtolower($opts['crisis'])) : '';
+if ($crisisArg !== '' && !in_array($crisisArg, ['alpha', 'bravo', 'all'], true)) {
+    fwrite(STDERR, "Unknown crisis '$crisisArg': use --crisis, --crisis=alpha or --crisis=all\n");
+    exit(1);
+}
+$crisisAlpha = in_array($crisisArg, ['alpha', 'all'], true); // AST-01: fever
+$crisisBravo = in_array($crisisArg, ['bravo', 'all'], true); // AST-02: heart rate + blood pressure
 
 // Starting values, close to the nominal baseline of data.json.
 $state = [
@@ -59,7 +68,9 @@ function post_json(string $url, array $payload, string $key): array
     return [$code, json_decode($body, true)];
 }
 
-echo "Sending to $baseUrl/api/readings every {$interval}s" . ($crisis ? ' (crisis mode)' : '') . ". Ctrl+C to stop.\n";
+$mode = $crisisAlpha && $crisisBravo ? ' (crisis: Alpha fever + Bravo cardiovascular)'
+    : ($crisisAlpha ? ' (crisis: Alpha fever)' : ($crisisBravo ? ' (crisis: Bravo cardiovascular)' : ''));
+echo "Sending to $baseUrl/api/readings every {$interval}s$mode. Ctrl+C to stop.\n";
 
 for ($i = 0; $count === 0 || $i < $count; $i++) {
     $time = gmdate('Y-m-d\TH:i:s\Z');
@@ -68,9 +79,14 @@ for ($i = 0; $count === 0 || $i < $count; $i++) {
             $v = walk($v, $bounds[$vital]);
         }
         unset($v);
-        if ($crisis && $astro === 'AST-02') {
+        // Crisis scenarios. Same values as sensor-cpp/simulator.cpp.
+        if ($crisisBravo && $astro === 'AST-02') {
             $values['heart_rate'] = min(130, 88 + $i * 6);
             $values['systolic_bp'] = min(160, 128 + $i * 5);
+        }
+        if ($crisisAlpha && $astro === 'AST-01') {
+            $values['body_temp'] = min(39.0, 37.2 + $i * 0.25);
+            $values['heart_rate'] = min(105, 74 + $i * 3);
         }
 
         $readings = [];

@@ -27,6 +27,6 @@ if errorlevel 1 (
   exit /b 1
 )
 
-rem Sends fake watch measurements. Options: --crisis  --interval=2  --count=10
+rem Sends fake watch measurements. Options: --crisis (Bravo)  --crisis=alpha  --crisis=all  --interval=2  --count=10
 "%PHP%" bin\simulate-watch.php %*
 pause

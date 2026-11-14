@@ -4,7 +4,7 @@
 
 Project AURA is built around a watch worn by each astronaut. It measures their vital signs and sends them to Earth, where mission control follows the crew's health on a web dashboard (**AURA // HRP·OS**). The dashboard flags readings that leave their safe range, shows the countermeasure to apply, and keeps an archive of alerts that ground control acknowledges.
 
-> ⚠️ **All data is simulated** for this prototype, and the thresholds are **illustrative**: they are **not** official NASA limits.
+> ⚠️ **All data is simulated** for this prototype. The thresholds are **illustrative** and are **not** official NASA limits, except the **radiation** thresholds, which are derived from NASA references (see [NASA and partner resources](#nasa-and-partner-resources)).
 
 This repository contains:
 
@@ -141,14 +141,26 @@ The wrist-worn approach follows HRP research listed on the [ongoing HRP research
 
 [Monitoring radiation for astronaut health](https://www.asc-csa.gc.ca/eng/news/articles/2026/2026-02-26-monitoring-radiation-astronaut-health.asp) (CSA, February 26, 2026) presents CANS, a compact and autonomous instrument that measures neutron radiation, which makes up about 30% of the radiation on the ISS. It motivated AURA's continuous, automatic radiation monitoring. A future version could take its radiation data from a CANS-type sensor instead of the simulator.
 
-> The vital-sign values themselves remain simulated, and the thresholds are illustrative: these resources guided **what** AURA monitors and **how** it is designed, not the numbers.
+### NASA — radiation thresholds
+
+The radiation card's thresholds come from NASA references (they are a simplification for this prototype, not an operational rule):
+
+| Level | Daily dose | Basis |
+|---|---|---|
+| Nominal | ≤ 1.3 mSv/day | **NASA-STD-3001** design value for galactic cosmic radiation (GCR) in free space ([NASA radiation protection technical brief](https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf)) |
+| Warning | > 1.3 mSv/day | above that design value |
+| Critical | > 1.8 mSv/day | above the average GCR dose (≈ 1.8 mSv/day) measured by the **RAD** instrument of NASA's Curiosity rover during its cruise to Mars (Zeitlin et al., *Science*, 2013): a higher daily dose points to a **solar particle event**, so the countermeasure is to move to the storm shelter |
+
+For context, NASA-STD-3001 also limits an astronaut's exposure to **250 mSv per solar particle event** and **600 mSv over a career**. The exact values are stored with the explanation in `frontend/data.json` (`threshold_source`) and shown in each card's dialog.
+
+> The vital-sign values themselves remain simulated, and the thresholds of the other vitals are illustrative: for them, these resources guided **what** AURA monitors and **how** it is designed, not the numbers.
 
 ## Use of AI tools
 
 As required by the NASA Space Apps rules, we declare where AI ("Super Intelligence") tools were used:
 
 - **Code and documentation:** parts of the dashboard (`frontend/`), the PHP server (`backend-php/`), the C++ watch simulator (`sensor-cpp/`) and the READMEs were written with the help of **Claude** (Anthropic), an AI assistant. Commits made with it carry a `Co-Authored-By: Claude` line in the Git history.
-- **Data:** all vital-sign readings in `frontend/data.json` and those sent by the simulators are simulated. The thresholds are illustrative, not NASA limits.
+- **Data:** all vital-sign readings in `frontend/data.json` and those sent by the simulators are simulated. The thresholds are illustrative, not NASA limits, except the radiation thresholds (derived from NASA-STD-3001 and Curiosity RAD measurements).
 
 The project idea (a watch that monitors astronauts and sends their health data to Earth, followed on a ground dashboard) and the design choices are the team's own.
 

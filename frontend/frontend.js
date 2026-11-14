@@ -626,6 +626,8 @@ function fillModal(metricId, metrics) {
   const hrp = HRP_LINKS[metricId];
   document.getElementById('modal-hrp-risk').textContent = hrp ? hrp.risk : '--';
   document.getElementById('modal-hrp-hazard').textContent = hrp ? hrp.hazard : '--';
+  const mainVital = VITALS[CARD_MAP[metricId].vitals[0]];
+  document.getElementById('modal-threshold-source').textContent = (mainVital && mainVital.threshold_source) || '--';
 
   const badge = document.getElementById('modal-status');
   badge.className = `status-badge ${data.status}`;

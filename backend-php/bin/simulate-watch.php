@@ -38,7 +38,7 @@ $daily = [
     'AST-02' => ['sleep_hours' => 7.6, 'bone_load' => 80, 'radiation_dose' => 0.62],
 ];
 // Solar eruption during batches 30-36 (one batch = one mission hour): radiation added to the
-// daily dose each hour (warning above 1 mSv/day, critical above 2).
+// daily dose each hour (warning above 1.3 mSv/day, critical above 1.8: thresholds from frontend/data.json).
 const FLARE_START = 30;
 const FLARE_END = 36;
 const FLARE_DOSE = [0.10, 0.22, 0.35, 0.42, 0.35, 0.22, 0.14];

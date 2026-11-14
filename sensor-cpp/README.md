@@ -6,7 +6,7 @@ En plus, il fait ce que ferait une vraie montre loin de la Terre :
 - **vérification à bord** (`checkOnBoard()`) : chaque mesure hors seuil déclenche une alerte locale sur la montre, même sans liaison avec la Terre ;
 - **file d'attente locale** (`std::deque`) : un paquet ne quitte la montre qu'une fois enregistré par le serveur. Si le serveur ne répond pas, les paquets attendent et partent dans l'ordre au prochain envoi (500 paquets max) ;
 - **coupure de liaison simulée** : `--outage=A:B` coupe la liaison de l'heure A à l'heure B ;
-- **éruption solaire** : un envoi = une heure de mission. Pendant les heures 30 à 36, la dose de radiation des deux astronautes monte (warning au-dessus de 1 mSv/jour, critique au-dessus de 2). Avec le bouton du site (40 envois), l'éruption arrive donc vers la fin.
+- **éruption solaire** : un envoi = une heure de mission. Pendant les heures 30 à 36, la dose de radiation des deux astronautes monte (warning au-dessus de 1,3 mSv/jour, critique au-dessus de 1,8 : seuils tirés de NASA-STD-3001 et des mesures de Curiosity/RAD, voir `frontend/data.json`). Avec le bouton du site (40 envois), l'éruption arrive donc vers la fin.
 
 Aucune bibliothèque externe : C++17 standard + Winsock (inclus dans Windows). Tout est dans `simulator.cpp`.
 

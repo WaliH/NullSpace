@@ -207,6 +207,15 @@
         <span class="terminal-title">AUTONOMOUS DECISION LOG:</span>
         <span id="terminal-feed" class="terminal-content">Passive biosensor array polling nominal across all crew nodes. Next sync Sol 142 22:00 UTC.</span>
       </div>
+
+      <!-- Filled by frontend.js from GET /api/alerts. Hidden when the site runs without the backend. -->
+      <div id="alert-log" class="alert-log hidden" aria-live="polite">
+        <div class="alert-log-header">
+          <span class="category-eyebrow">Module 02 // Alert Archive</span>
+          <span id="alert-log-count" class="alert-log-count">0 open</span>
+        </div>
+        <ul id="alert-log-list" class="alert-log-list"></ul>
+      </div>
     </section>
 
     <aside class="scanner-aside">
@@ -629,7 +638,7 @@
       </div>
 
       <div class="modal-footer">
-        <span class="modal-id-stamp">DECISION-SUPPORT // ID: ART-4091</span>
+        <span id="modal-id-stamp" class="modal-id-stamp">DECISION-SUPPORT // ID: ART-4091</span>
         <button id="btn-modal-dismiss" class="btn-dismiss">
           Acknowledge & Close
         </button>

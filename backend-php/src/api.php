@@ -5,6 +5,8 @@
 //   GET  /api/telemetry   → same JSON shape as frontend/data.json
 //                           optional filters: ?astronaut_id=AST-01&since=2026-11-14T00:00:00Z&source=watch
 //   POST /api/readings    → the watch sends its measurements (header X-Device-Key required)
+//   GET  /api/alerts      → alerts, newest first. Filters: ?state=open|acknowledged|all&astronaut_id=&source=&limit=
+//   POST /api/alerts/{id}/ack → mission control acknowledges an alert: {"acknowledged_by": "...", "note": "..."}
 
 require_once __DIR__ . '/db.php';
 
@@ -34,6 +36,10 @@ function aura_handle_api(string $method, string $path): void
 
     try {
         $route = $method . ' ' . rtrim($path, '/');
+        if (preg_match('#^POST /api/alerts/(\d+)/ack$#', $route, $m)) {
+            aura_api_ack_alert((int) $m[1]);
+            return;
+        }
         switch ($route) {
             case 'GET /api/health':
                 aura_api_health();
@@ -43,6 +49,9 @@ function aura_handle_api(string $method, string $path): void
                 break;
             case 'POST /api/readings':
                 aura_api_post_readings();
+                break;
+            case 'GET /api/alerts':
+                aura_send_json(200, ['alerts' => aura_list_alerts(aura_db(), $_GET)]);
                 break;
             default:
                 aura_error(404, "Unknown route: $method $path");
@@ -59,12 +68,14 @@ function aura_api_health(): void
     $pdo = aura_db();
     $count = (int) $pdo->query('SELECT COUNT(*) FROM readings')->fetchColumn();
     $watch = (int) $pdo->query("SELECT COUNT(*) FROM readings WHERE source = 'watch'")->fetchColumn();
+    $openAlerts = (int) $pdo->query('SELECT COUNT(*) FROM alerts WHERE acknowledged_at IS NULL')->fetchColumn();
     aura_send_json(200, [
         'ok' => true,
         'php' => PHP_VERSION,
         'os' => PHP_OS_FAMILY,
         'readings' => $count,
         'watch_readings' => $watch,
+        'open_alerts' => $openAlerts,
         'seeded' => $count > 0,
     ]);
 }
@@ -209,12 +220,44 @@ function aura_api_post_readings(): void
             'value' => aura_number($value),
             'status' => $status,
         ];
+        $alertId = aura_track_alert($pdo, $row + ['source' => 'watch'], $vital);
         $saved[] = $row;
         if ($status !== 'nominal') {
-            $alerts[] = $row + ['countermeasure' => $vital['countermeasure']];
+            $alerts[] = $row + ['alert_id' => $alertId, 'countermeasure' => $vital['countermeasure']];
         }
     }
     $pdo->commit();
 
     aura_send_json(201, ['saved' => $saved, 'alerts' => $alerts]);
+}
+
+// Body (optional): {"acknowledged_by": "Flight Surgeon", "note": "Crew told to rest"}
+// No key required: in this prototype the dashboard is only reachable on the team's PC / network.
+function aura_api_ack_alert(int $id): void
+{
+    $pdo = aura_db();
+    $alert = aura_get_alert($pdo, $id);
+    if (!$alert) {
+        aura_error(404, "Alert $id not found.");
+        return;
+    }
+    if ($alert['acknowledged']) {
+        aura_send_json(409, ['error' => "Alert $id was already acknowledged.", 'alert' => $alert]);
+        return;
+    }
+
+    $body = json_decode(file_get_contents('php://input') ?: '{}', true);
+    if (!is_array($body)) {
+        $body = [];
+    }
+    $by = trim((string) ($body['acknowledged_by'] ?? '')) ?: 'Mission Control';
+    $note = isset($body['note']) ? substr(trim((string) $body['note']), 0, 500) : null;
+
+    $stmt = $pdo->prepare(
+        'UPDATE alerts SET acknowledged_at = ?, acknowledged_by = ?, ack_note = ?
+         WHERE id = ? AND acknowledged_at IS NULL'
+    );
+    $stmt->execute([gmdate('Y-m-d\TH:i:s\Z'), substr($by, 0, 100), $note, $id]);
+
+    aura_send_json(200, ['alert' => aura_get_alert($pdo, $id)]);
 }

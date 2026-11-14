@@ -51,6 +51,7 @@ puis ouvrir http://localhost:8000 (ou l'extension Live Server de VS Code). Le si
   `php -S localhost:8787 -t ..\frontend router.php` (`router.php` envoie `/api/...` vers `src/api.php`, le reste vers `frontend/`).
 - `GET /api/telemetry` → même format que `data.json`, avec un champ `source` en plus sur chaque mesure : `scenario` (données de démo) ou `watch` (envoyée par la montre).
 - `POST /api/readings` (en-tête `X-Device-Key`) → la montre envoie `{astronaut_id, recorded_at?, readings:[{vital_id, value}]}`. Le serveur recalcule le statut.
+- `GET /api/alerts` / `POST /api/alerts/{id}/ack` → alertes (`src/alerts.php`). Créées par `aura_track_alert()` pour chaque mesure hors seuil (watch et scénario importé). Une alerte = un problème (astronaute + constante + source) : tant qu'elle est ouverte, les mesures suivantes la mettent à jour (`peak_value`, `last_value`, `readings_count`).
 - `GET /api/health` → vérification rapide.
 - Port par défaut **8787** (pas 8080, souvent pris sous Windows par Tomcat/XAMPP, Oracle…) : `PORT` dans `start-server.bat` et `port` dans `config.php` doivent rester identiques.
 - `bin/seed.php` importe `frontend/data.json` (`--reset` efface aussi les mesures de la montre). `bin/simulate-watch.php` simule la montre.
@@ -61,6 +62,7 @@ puis ouvrir http://localhost:8000 (ou l'extension Live Server de VS Code). Le si
 - `DATA_SOURCES = ['/api/telemetry', 'data.json']` : le premier qui répond est utilisé.
 - Deux modes : `scenario` (données de démo) et `live` (mesures `source: 'watch'`). S'il y a des mesures de la montre, le tableau de bord démarre en `live` et interroge l'API toutes les 5 s (`LIVE_POLL_MS`). Le replay de l'éruption solaire utilise toujours le scénario ; « Restore » revient au live s'il existe.
 - Une carte sans mesure (la montre n'a pas encore envoyé cette constante) affiche `--` et `NO DATA`.
+- Panneau « Module 02 // Alert Archive » (seulement avec le backend) : alertes `watch` en mode live, alertes `scenario` déjà survenues à l'heure affichée sinon. En mode scénario, `alertView()` recalcule pic, dernière valeur et nombre de mesures à `currentTime`, pour que le replay n'affiche jamais de valeurs futures. Le bouton du dialogue d'une carte accuse réception de l'alerte ouverte de cette carte.
 - `CARD_MAP` relie chaque carte de `index.html` (`data-metric-id`) aux constantes et au point chaud de la silhouette. La tension artérielle combine `systolic_bp` et `diastolic_bp`.
 - `EXTRA_VITALS` : constantes sans carte qui comptent quand même pour la jauge et les points chauds (`radiation_dose`).
 - Statut d'une carte = le pire statut de ses constantes. Point chaud = le pire statut des cartes qui le partagent.

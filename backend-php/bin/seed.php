@@ -30,8 +30,10 @@ try {
 $pdo->beginTransaction();
 
 if ($reset) {
+    $pdo->exec('DELETE FROM alerts');
     $pdo->exec('DELETE FROM readings');
 } else {
+    $pdo->exec("DELETE FROM alerts WHERE source = 'scenario'");
     $pdo->exec("DELETE FROM readings WHERE source = 'scenario'");
 }
 $pdo->exec('DELETE FROM meta');
@@ -74,21 +76,35 @@ $reading = $pdo->prepare(
     "INSERT INTO readings (reading_id, recorded_at, astronaut_id, vital_id, value, status, source)
      VALUES (?, ?, ?, ?, ?, ?, 'scenario')"
 );
+// Chronological order, so that the scenario's alerts are built the same way as live ones.
+$readings = $data['readings'];
+usort($readings, fn($a, $b) => strcmp($a['recorded_at'], $b['recorded_at']));
+
 $mismatch = 0;
-foreach ($data['readings'] as $r) {
+foreach ($readings as $r) {
     $status = aura_compute_status($vitals[$r['vital_id']], (float) $r['value']);
     if (isset($r['status']) && $r['status'] !== $status) {
         $mismatch++;
     }
     $reading->execute([$r['reading_id'], $r['recorded_at'], $r['astronaut_id'], $r['vital_id'], $r['value'], $status]);
+    aura_track_alert($pdo, [
+        'reading_id' => $r['reading_id'],
+        'recorded_at' => $r['recorded_at'],
+        'astronaut_id' => $r['astronaut_id'],
+        'vital_id' => $r['vital_id'],
+        'value' => (float) $r['value'],
+        'status' => $status,
+        'source' => 'scenario',
+    ], $vitals[$r['vital_id']]);
 }
 
 $pdo->commit();
 
 $watch = (int) $pdo->query("SELECT COUNT(*) FROM readings WHERE source = 'watch'")->fetchColumn();
+$scenarioAlerts = (int) $pdo->query("SELECT COUNT(*) FROM alerts WHERE source = 'scenario'")->fetchColumn();
 echo "Database: {$config['db_path']}\n";
 echo count($data['astronauts']) . " astronauts, " . count($data['vitals']) . " vitals, "
-    . count($data['readings']) . " scenario readings imported.\n";
+    . count($data['readings']) . " scenario readings imported, $scenarioAlerts scenario alerts.\n";
 echo "Watch readings kept: $watch" . ($reset ? " (reset)" : "") . "\n";
 if ($mismatch) {
     echo "Note: $mismatch readings had a status in data.json that did not match the thresholds; recomputed.\n";

@@ -5,6 +5,6 @@ if not exist simulator.exe (
   pause
   exit /b 1
 )
-rem Crisis mode: Bravo's heart rate and blood pressure rise to critical.
-simulator.exe --crisis %*
+rem Crisis mode for both astronauts: Alpha fever + Bravo heart rate / blood pressure.
+simulator.exe --crisis=all %*
 pause

@@ -13,7 +13,7 @@ sensor-cpp/
                     (réutilisable pour la vraie montre si elle tourne sur un PC ou un Raspberry Pi)
   build.bat         compile simulator.exe sous Windows
   run-simulator.bat lance simulator.exe (double-clic)
-  run-crisis.bat    lance simulator.exe --crisis (double-clic)
+  run-crisis.bat    lance simulator.exe --crisis=all : crise pour les deux astronautes (double-clic)
 ```
 
 ## Compiler sous Windows
@@ -34,12 +34,14 @@ Avec MinGW, `-lws2_32` est obligatoire (bibliothèque réseau de Windows). `-sta
 ## Utiliser
 
 1. Lancez d'abord le backend : `backend-php\start-server.bat`.
-2. **Le plus simple** : double-cliquez sur **`run-simulator.bat`** (valeurs normales) ou sur **`run-crisis.bat`** (mode crise).
+2. **Le plus simple** : double-cliquez sur **`run-simulator.bat`** (valeurs normales) ou sur **`run-crisis.bat`** (crise pour les deux astronautes).
 
    **Ou dans un terminal**, depuis `sensor-cpp`. `--crisis` n'est pas un fichier, c'est une option ajoutée après `simulator.exe`. Dans PowerShell (le terminal de VS Code), écrivez `.\simulator.exe --crisis` ; dans cmd, `simulator.exe --crisis`.
    ```
    simulator.exe                   un envoi toutes les 5 s, valeurs normales (Ctrl+C pour arrêter)
-   simulator.exe --crisis          la fréquence cardiaque et la tension de Bravo montent jusqu'au critique
+   simulator.exe --crisis          Bravo (AST-02, profil MALE) : fréquence cardiaque et tension montent jusqu'au critique
+   simulator.exe --crisis=alpha    Alpha (AST-01, profil FEMALE) : fièvre, la température monte jusqu'au critique
+   simulator.exe --crisis=all      les deux crises en même temps
    simulator.exe --interval=2      un envoi toutes les 2 s
    simulator.exe --count=10        s'arrête après 10 envois
    simulator.exe --url=http://localhost:8787 --key=aura-demo-key

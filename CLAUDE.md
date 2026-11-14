@@ -27,7 +27,7 @@ pas de commandes propres à Linux. En PHP, construire les chemins avec `__DIR__`
 
 ## Lancer le site
 Avec le backend (recommandé) : double-cliquer sur `backend-php\start-server.bat`, puis ouvrir http://localhost:8787.
-Le simulateur de montre : `backend-php\simulate-watch.bat` (option `--crisis` pour déclencher des alertes).
+Le simulateur de montre : `backend-php\simulate-watch.bat` (options `--crisis` = Bravo, `--crisis=alpha` = fièvre d'Alpha, `--crisis=all` = les deux). Même chose en C++ : `sensor-cpp\simulator.exe`.
 
 Sans backend : le site doit quand même être servi en HTTP (pas en `file://`) :
 ```

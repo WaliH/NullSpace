@@ -18,11 +18,13 @@ const CARD_MAP = {
   blood_glucose:  { vitals: ['blood_glucose'],              hotspotId: 'hotspot-immune' },
   body_temp:      { vitals: ['body_temp'],                  hotspotId: 'hotspot-immune' },
   bone_load:      { vitals: ['bone_load'],                  hotspotId: 'hotspot-bone_gravity' },
-  sleep_mood:     { vitals: ['sleep_hours'],                hotspotId: 'hotspot-behavioral' }
+  sleep_mood:     { vitals: ['sleep_hours'],                hotspotId: 'hotspot-behavioral' },
+  radiation_dose: { vitals: ['radiation_dose'],             hotspotId: 'hotspot-immune' }
 };
 
 // Vitals without a card that still count toward the readiness ring and body hotspots.
-const EXTRA_VITALS = { radiation_dose: { hotspotId: 'hotspot-immune' } };
+// Format: { vital_id: { hotspotId: '...' } }. Empty now that radiation has its own card.
+const EXTRA_VITALS = {};
 
 const ZONE_LABELS = {
   cardiovascular: 'Cardiovascular',
@@ -33,7 +35,7 @@ const ZONE_LABELS = {
 };
 
 const UNIT_LABELS = { C: '°C' };
-const ONE_DECIMAL = new Set(['body_temp', 'sleep_hours', 'radiation_dose']);
+const DECIMALS = { body_temp: 1, sleep_hours: 1, radiation_dose: 2 };  // other vitals: whole numbers
 const STATUS_RANK = { nominal: 0, warning: 1, critical: 2 };
 const STATUS_SCORE = { nominal: 100, warning: 65, critical: 30 };
 const REPLAY_STEP_MS = 700;   // one simulated hour per step
@@ -240,7 +242,7 @@ function history(astronautId, vitalId, time, count) {
 }
 
 function formatValue(vitalId, value) {
-  return ONE_DECIMAL.has(vitalId) ? Number(value).toFixed(1) : String(Math.round(value));
+  return vitalId in DECIMALS ? Number(value).toFixed(DECIMALS[vitalId]) : String(Math.round(value));
 }
 
 function formatTime(iso) {

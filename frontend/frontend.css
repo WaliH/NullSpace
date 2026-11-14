@@ -337,6 +337,10 @@ body {
   gap: 1.25rem;
 }
 
+.vital-card-wide {
+  grid-column: 1 / -1;
+}
+
 .vital-card:hover {
   transform: translateY(-3px);
   background: var(--bg-card-hover);

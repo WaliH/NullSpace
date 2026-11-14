@@ -63,11 +63,12 @@ puis ouvrir http://localhost:8000 (ou l'extension Live Server de VS Code). Le si
 - Deux modes : `scenario` (données de démo) et `live` (mesures `source: 'watch'`). Avec le backend, l'API est interrogée toutes les 5 s (`LIVE_POLL_MS`). Le mode `live` n'est utilisé que si la dernière mesure de la montre a moins de 2 min (`LIVE_FRESH_MS`, comparée à l'heure du serveur `meta.generated_at`) : d'anciennes mesures de test restées dans la base ne remplacent donc pas les valeurs de démo. Le replay de l'éruption solaire utilise toujours le scénario ; « Restore » revient au live s'il est encore récent. La pastille `#mode-pill` en haut indique le mode affiché.
 - Une carte sans mesure (la montre n'a pas encore envoyé cette constante) affiche `--` et `NO DATA`.
 - Courbes (sparklines) : ligne grise sur les 12 dernières mesures, et chaque segment touchant une mesure hors seuil est redessiné en orange/rouge (`drawSparkline()`, statut de la carte à chaque instant : la tension utilise systolique ET diastolique). Un pic reste donc coloré tant qu'il est visible dans la courbe.
-- Pastille de statut sur les boutons MALE / FEMALE (`updateProfileDots()`) : pire statut de toutes les constantes de cet astronaute, radiation comprise (elle n'a pas de carte). L'infobulle liste les problèmes.
+- Pastille de statut sur les boutons MALE / FEMALE (`updateProfileDots()`) : pire statut de toutes les constantes de cet astronaute, radiation comprise. L'infobulle liste les problèmes.
 - Le « decision log » du replay donne la priorité aux changements de l'astronaute affiché.
 - Panneau « Module 02 // Alert Archive » (seulement avec le backend) : uniquement l'astronaute affiché (l'en-tête résume les alertes ouvertes de l'autre) ; alertes `watch` en mode live, alertes `scenario` déjà survenues à l'heure affichée sinon. En mode scénario, `alertView()` recalcule pic, dernière valeur et nombre de mesures à `currentTime`, pour que le replay n'affiche jamais de valeurs futures. Le bouton du dialogue d'une carte accuse réception de l'alerte ouverte de cette carte.
 - `CARD_MAP` relie chaque carte de `index.html` (`data-metric-id`) aux constantes et au point chaud de la silhouette. La tension artérielle combine `systolic_bp` et `diastolic_bp`.
-- `EXTRA_VITALS` : constantes sans carte qui comptent quand même pour la jauge et les points chauds (`radiation_dose`).
+- 7 cartes : fréquence cardiaque, tension, glycémie, température, exercice (`bone_load`), sommeil, radiation. La carte radiation (`radiation_dose`, classe `vital-card-wide`) occupe toute la dernière ligne de la grille.
+- `EXTRA_VITALS` : constantes sans carte qui comptent quand même pour la jauge et les points chauds (vide aujourd'hui).
 - Statut d'une carte = le pire statut de ses constantes. Point chaud = le pire statut des cartes qui le partagent.
 - Jauge « Systemic Reserve » = moyenne des scores (nominal 100, warning 65, critical 30).
 - Le bouton homme/femme change l'astronaute affiché (M → AST-02, F → AST-01).
@@ -75,7 +76,7 @@ puis ouvrir http://localhost:8000 (ou l'extension Live Server de VS Code). Le si
 - Les ids HTML suivent le motif `val-<id>`, `ref-<id>`, `status-<id>`. Tout ajout de carte doit les respecter et être ajouté à `CARD_MAP`.
 
 ## Filtres
-Catégories des filtres : `cardio`, `metabolic`, `immuno`, `neuro`, `musculo`. Un élément peut en avoir plusieurs, séparées par des espaces (`data-category="immuno metabolic"`) : c'est le cas du point chaud IMMUNO·04, qui regroupe glycémie, température et radiation.
+Catégories des filtres : `cardio`, `metabolic`, `immuno`, `neuro`, `musculo`. Un élément peut en avoir plusieurs, séparées par des espaces (`data-category="immuno metabolic"`) : c'est le cas du point chaud IMMUNO·04, qui regroupe glycémie, température et radiation. Le filtre `immuno` montre les cartes température et radiation.
 
 ## À savoir
 - Les valeurs écrites en dur dans `index.html` ne sont que des valeurs de départ : le JS les remplace.

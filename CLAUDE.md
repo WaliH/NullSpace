@@ -20,6 +20,8 @@ sensor-cpp/      → code C++ de la montre : simulator.cpp (simulateur de montre
                    vérification à bord, file locale, client HTTP Winsock) + aura_client.hpp (client HTTP
                    réutilisable, plus utilisé par simulator.cpp). Compilation : build.bat
 ```
+`README.md` (racine, en anglais) : guide pour le jury (installation Windows / macOS / Linux, visite guidée, dépannage). Le tenir à jour quand une étape ou un bouton change.
+
 Le frontend est 100 % statique, sans framework ni build, JavaScript vanilla.
 
 **L'équipe travaille sous Windows.** Les commandes et scripts doivent marcher sous Windows (cmd / PowerShell) :

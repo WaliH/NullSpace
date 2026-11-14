@@ -12,6 +12,8 @@ sensor-cpp/
   aura_client.hpp   client HTTP minimal : construit le JSON et l'envoie au backend
                     (réutilisable pour la vraie montre si elle tourne sur un PC ou un Raspberry Pi)
   build.bat         compile simulator.exe sous Windows
+  run-simulator.bat lance simulator.exe (double-clic)
+  run-crisis.bat    lance simulator.exe --crisis (double-clic)
 ```
 
 ## Compiler sous Windows
@@ -32,7 +34,9 @@ Avec MinGW, `-lws2_32` est obligatoire (bibliothèque réseau de Windows). `-sta
 ## Utiliser
 
 1. Lancez d'abord le backend : `backend-php\start-server.bat`.
-2. Dans un autre terminal, depuis `sensor-cpp` :
+2. **Le plus simple** : double-cliquez sur **`run-simulator.bat`** (valeurs normales) ou sur **`run-crisis.bat`** (mode crise).
+
+   **Ou dans un terminal**, depuis `sensor-cpp`. `--crisis` n'est pas un fichier, c'est une option ajoutée après `simulator.exe`. Dans PowerShell (le terminal de VS Code), écrivez `.\simulator.exe --crisis` ; dans cmd, `simulator.exe --crisis`.
    ```
    simulator.exe                   un envoi toutes les 5 s, valeurs normales (Ctrl+C pour arrêter)
    simulator.exe --crisis          la fréquence cardiaque et la tension de Bravo montent jusqu'au critique

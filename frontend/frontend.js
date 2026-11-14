@@ -294,7 +294,20 @@ function buildMetric(cardId, astronautId, time) {
     countermeasure: status === 'nominal' ? main.nominal_message : driver.countermeasure,
     recordedAt: readings[0].recorded_at,
     hotspotId: cfg.hotspotId,
-    spark: history(astronautId, main.vital_id, time, SPARK_POINTS).map(r => r.value)
+    ...sparkline(cfg, astronautId, main.vital_id, time)
+  };
+}
+
+// Values of the card's main vital over the last hours, plus the card's status at each of those
+// times (worst of all its vitals: blood pressure uses systolic AND diastolic).
+function sparkline(cfg, astronautId, mainVitalId, time) {
+  const hist = history(astronautId, mainVitalId, time, SPARK_POINTS);
+  return {
+    spark: hist.map(r => r.value),
+    sparkStatus: hist.map(r => worstStatus(cfg.vitals.map(id => {
+      const at = latestReading(astronautId, id, r.recorded_at);
+      return at ? computeStatus(id, at.value) : 'nominal';
+    })))
   };
 }
 
@@ -350,13 +363,7 @@ function renderVitals() {
     const cardEl = document.querySelector(`.vital-card[data-metric-id="${metric.id}"]`);
     if (cardEl) {
       const track = cardEl.querySelector('.sparkline-track');
-      if (track) {
-        const d = sparklinePath(metric.spark);
-        if (d) track.setAttribute('d', d);
-        if (metric.status === 'critical') track.style.stroke = 'var(--state-critical)';
-        else if (metric.status === 'warning') track.style.stroke = 'var(--state-warning)';
-        else track.style.stroke = 'rgba(255, 255, 255, 0.2)';
-      }
+      if (track) drawSparkline(track, metric.spark, metric.sparkStatus);
     }
 
     hotspotStatus[metric.hotspotId] = worstStatus([hotspotStatus[metric.hotspotId] || 'nominal', metric.status]);
@@ -373,6 +380,7 @@ function renderVitals() {
   });
 
   updateReadinessRing(metrics);
+  updateProfileDots();
   renderAlertLog();
 
   if (activeModalMetricId && !document.getElementById('medical-modal').classList.contains('hidden')) {
@@ -380,16 +388,59 @@ function renderVitals() {
   }
 }
 
-// Draws the last readings into the 100x24 sparkline box.
-function sparklinePath(values) {
-  if (!values || values.length < 2) return null;
+function sparklinePoints(values) {
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = max - min || 1;
   const step = 100 / (values.length - 1);
-  return values
-    .map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * step).toFixed(1)},${(21 - ((v - min) / span) * 18).toFixed(1)}`)
-    .join(' ');
+  return values.map((v, i) => [(i * step).toFixed(1), (21 - ((v - min) / span) * 18).toFixed(1)]);
+}
+
+// Gray line for the whole history, then every segment touching an out-of-range reading is
+// redrawn in orange (warning) or red (critical). So a spike stays colored as long as it is
+// visible in the graph, even after the current value is back to nominal.
+function drawSparkline(track, values, statuses) {
+  if (!values || values.length < 2) return;
+  const pts = sparklinePoints(values);
+  track.setAttribute('d', pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' '));
+  track.style.stroke = '';
+
+  const svg = track.ownerSVGElement;
+  let layer = svg.querySelector('.sparkline-alerts');
+  if (!layer) {
+    layer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    layer.setAttribute('class', 'sparkline-alerts');
+    svg.appendChild(layer);
+  }
+  layer.replaceChildren();
+  for (let i = 1; i < pts.length; i++) {
+    const status = worstStatus([statuses[i - 1], statuses[i]]);
+    if (status === 'nominal') continue;
+    const seg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    seg.setAttribute('class', `spark-seg ${status}`);
+    seg.setAttribute('d', `M${pts[i - 1][0]},${pts[i - 1][1]} L${pts[i][0]},${pts[i][1]}`);
+    layer.appendChild(seg);
+  }
+}
+
+// Status dot on the MALE / FEMALE buttons: worst status of ALL vitals of that astronaut
+// (radiation included), so a problem on the other astronaut is visible without switching.
+function updateProfileDots() {
+  Object.entries(ASTRO_BY_PROFILE).forEach(([profile, astro]) => {
+    const dot = document.getElementById(`dot-${profile}`);
+    if (!dot || !astro) return;
+    const problems = [];
+    let status = 'nominal';
+    Object.keys(VITALS).forEach(vitalId => {
+      const r = latestReading(astro.astronaut_id, vitalId, currentTime);
+      if (!r) return;
+      const s = computeStatus(vitalId, r.value);
+      if (s !== 'nominal') problems.push(`${VITALS[vitalId].label} ${s}`);
+      status = worstStatus([status, s]);
+    });
+    dot.setAttribute('data-status', status);
+    dot.parentElement.title = `${astro.display_name}: ${problems.length ? problems.join(', ') : 'all nominal'}`;
+  });
 }
 
 function updateReadinessRing(metrics) {
@@ -654,18 +705,24 @@ function renderAlertLog() {
   panel.classList.toggle('hidden', !hasBackend());
   if (!hasBackend()) return;
 
-  const alerts = visibleAlerts();
+  // Only the astronaut on screen, so the list matches the cards. The other one is summarized.
+  const astro = currentAstronaut();
+  const all = visibleAlerts();
+  const alerts = all.filter(a => a.astronaut_id === astro.astronaut_id);
   const open = alerts.filter(a => !a.acknowledged).length;
+  const otherOpen = all.filter(a => a.astronaut_id !== astro.astronaut_id && !a.acknowledged);
   if (count) {
-    count.textContent = `${open} open · ${alerts.length} total`;
-    count.classList.toggle('has-open', open > 0);
+    let text = `${astro.display_name}: ${open} open · ${alerts.length} total`;
+    if (otherOpen.length) text += ` — ${otherOpen[0].display_name}: ${otherOpen.length} open (switch profile)`;
+    count.textContent = text;
+    count.classList.toggle('has-open', open + otherOpen.length > 0);
   }
 
   list.replaceChildren();
   if (!alerts.length) {
     const li = document.createElement('li');
     li.className = 'alert-log-empty';
-    li.textContent = 'No alert recorded for this window.';
+    li.textContent = `No alert for ${astro.display_name} in this window.`;
     list.appendChild(li);
     return;
   }
@@ -823,10 +880,13 @@ window.simulateSolarFlareCrisis = function () {
     renderVitals();
 
     const now = crewStatuses(currentTime);
+    // Changes of the astronaut on screen first, then the most severe.
+    const shownId = currentAstronaut().astronaut_id;
     const changes = Object.keys(now)
       .filter(k => !previous[k] || previous[k].status !== now[k].status)
       .map(k => now[k])
-      .sort((a, b) => STATUS_RANK[b.status] - STATUS_RANK[a.status]);
+      .sort((a, b) => (b.astro.astronaut_id === shownId) - (a.astro.astronaut_id === shownId)
+        || STATUS_RANK[b.status] - STATUS_RANK[a.status]);
     previous = now;
 
     const clock = currentTime.slice(11, 16);

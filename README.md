@@ -109,6 +109,15 @@ simulator.exe --crisis=all                    # Windows (in PowerShell: .\simula
 
 ---
 
+## Use of AI tools
+
+As required by the NASA Space Apps rules, we declare where AI ("Super Intelligence") tools were used:
+
+- **Code and documentation:** parts of the dashboard (`frontend/`), the PHP server (`backend-php/`), the C++ watch simulator (`sensor-cpp/`) and the READMEs were written with the help of **Claude** (Anthropic), an AI assistant. Commits made with it carry a `Co-Authored-By: Claude` line in the Git history.
+- **Data:** all vital-sign readings in `frontend/data.json` and those sent by the simulators are simulated. The thresholds are illustrative, not NASA limits.
+
+The project idea (a watch that monitors astronauts and sends their health data to Earth, followed on a ground dashboard) and the design choices are the team's own.
+
 ## How it works (for the curious)
 
 ```

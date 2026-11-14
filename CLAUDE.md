@@ -7,21 +7,26 @@ Concept : une montre (AuraWatch) mesure les constantes de l'astronaute et les en
 
 Toutes les données sont **simulées** pour la démo. Les seuils sont **illustratifs**, ce ne sont **pas** des limites officielles NASA — ne jamais les présenter comme tels.
 
-## Structure
+## Structure du dépôt (github.com/WaliH/NullSpace)
 ```
-index.html     → page du tableau de bord (cartes de constantes + silhouette interactive + modale)
-frontend.css   → styles (thème sombre « verre », variables CSS dans :root)
-frontend.js    → toute la logique : chargement des données, statuts, rendu, replay
-data.json      → données simulées (doit être À CÔTÉ de index.html)
+frontend/
+  index.html     → page du tableau de bord (cartes de constantes + silhouette interactive + modale)
+  frontend.css   → styles (thème sombre « verre », variables CSS dans :root)
+  frontend.js    → toute la logique : chargement des données, statuts, rendu, replay
+  data.json      → données simulées (doit rester À CÔTÉ de index.html)
+backend-php/     → futur backend PHP (vide pour l'instant) : recevra les mesures de la montre
+                   et servira une API qui renvoie le même format JSON que data.json
+sensor-cpp/      → futur code C++ de la montre / des capteurs (vide pour l'instant)
 ```
-Site 100 % statique, sans framework ni build, JavaScript vanilla.
+Le frontend est 100 % statique, sans framework ni build, JavaScript vanilla.
 
 ## Lancer le site
 `frontend.js` charge `data.json` avec `fetch`, donc le site doit être servi en HTTP (pas en `file://`) :
 ```
+cd frontend
 python -m http.server 8000
 ```
-puis ouvrir http://localhost:8000 (ou utiliser l'extension Live Server de VS Code).
+puis ouvrir http://localhost:8000 (ou utiliser l'extension Live Server de VS Code sur `frontend/index.html`).
 
 ## Données (`data.json`)
 - `meta` : infos du projet et avertissement « données simulées ».

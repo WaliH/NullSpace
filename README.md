@@ -109,6 +109,40 @@ simulator.exe --crisis=all                    # Windows (in PowerShell: .\simula
 
 ---
 
+## NASA and partner resources
+
+Project AURA is built on the resources of NASA's **Human Research Program (HRP)** and of the **Canadian Space Agency**, a 2026 Space Apps Space Agency Partner.
+
+### NASA HRP — risks addressed by each vital
+
+Each card on the dashboard monitors a risk from the [HRP list of human health risks](https://www.nasa.gov/hrp/risks/), linked to one of the [5 hazards of human spaceflight](https://www.nasa.gov/hrp/hazards/). Click a card to see its risk and hazard in the dialog.
+
+| Dashboard card | HRP risk | Hazard |
+|---|---|---|
+| Heart rate, blood pressure | Risk of Cardiovascular Adaptations | Gravity fields |
+| ARED resistive exercise | Risk of Spaceflight-Induced Bone Changes | Gravity fields |
+| Sleep & circadian rhythm | Risk of Inadequate Sleep and Irregular Schedules | Isolation and confinement |
+| Daily radiation dose | Risk of Radiation-Induced Cancers | Space radiation |
+| Core body temperature (fever) | Risk of Altered Immune System Responses | Hostile or closed environments |
+| Blood glucose | Risk of Inadequate Food and Nutrition | Distance from Earth |
+
+### NASA HRP — "Distance from Earth"
+
+The HRP hazards page explains that farther missions make resupply, instructions and medical care harder to get, and that planning and self-sufficiency will be key. Project AURA is designed for this:
+- the watch checks every reading **on board** and alerts the astronaut even without a link to Earth;
+- readings are **stored on the watch** during communication outages and delivered, in order and with their original time, when the link returns (`--outage` option of the C++ simulator);
+- the dashboard shows the **Earth signal delay**, and every alert comes with a countermeasure the crew can apply right away.
+
+### NASA HRP — ongoing research
+
+The wrist-worn approach follows HRP research listed on the [ongoing HRP research page](https://www.nasa.gov/hrp/ongoing-hrp-research/): a study that uses a wrist-worn actigraphy device to monitor astronauts' activity, sleep and light exposure, and the Tempus Pro telemedicine device for remote, near real-time diagnosis. Project AURA combines both ideas: continuous wrist monitoring, plus remote follow-up on a ground dashboard.
+
+### Canadian Space Agency — radiation monitoring
+
+[Monitoring radiation for astronaut health](https://www.asc-csa.gc.ca/eng/news/articles/2026/2026-02-26-monitoring-radiation-astronaut-health.asp) (CSA, February 26, 2026) presents CANS, a compact and autonomous instrument that measures neutron radiation, which makes up about 30% of the radiation on the ISS. It motivated AURA's continuous, automatic radiation monitoring. A future version could take its radiation data from a CANS-type sensor instead of the simulator.
+
+> The vital-sign values themselves remain simulated, and the thresholds are illustrative: these resources guided **what** AURA monitors and **how** it is designed, not the numbers.
+
 ## Use of AI tools
 
 As required by the NASA Space Apps rules, we declare where AI ("Super Intelligence") tools were used:

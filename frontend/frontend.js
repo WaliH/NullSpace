@@ -23,6 +23,18 @@ const CARD_MAP = {
   radiation_dose: { vitals: ['radiation_dose'],             hotspotId: 'hotspot-immune' }
 };
 
+// NASA Human Research Program risk (nasa.gov/hrp/risks) and spaceflight hazard (nasa.gov/hrp/hazards)
+// that each card addresses. Shown in the card dialog.
+const HRP_LINKS = {
+  heart_rate:     { risk: 'Risk of Cardiovascular Adaptations',                hazard: 'Gravity fields' },
+  blood_pressure: { risk: 'Risk of Cardiovascular Adaptations',                hazard: 'Gravity fields' },
+  blood_glucose:  { risk: 'Risk of Inadequate Food and Nutrition',             hazard: 'Distance from Earth' },
+  body_temp:      { risk: 'Risk of Altered Immune System Responses',           hazard: 'Hostile or closed environments' },
+  bone_load:      { risk: 'Risk of Spaceflight-Induced Bone Changes',          hazard: 'Gravity fields' },
+  sleep_mood:     { risk: 'Risk of Inadequate Sleep and Irregular Schedules', hazard: 'Isolation and confinement' },
+  radiation_dose: { risk: 'Risk of Radiation-Induced Cancers',                 hazard: 'Space radiation' }
+};
+
 // Vitals without a card that still count toward the readiness ring and body hotspots.
 // Format: { vital_id: { hotspotId: '...' } }. Empty now that radiation has its own card.
 const EXTRA_VITALS = {};
@@ -610,6 +622,10 @@ function fillModal(metricId, metrics) {
   document.getElementById('modal-current-val').textContent = `${data.val} ${data.unit}`;
   document.getElementById('modal-countermeasure').textContent =
     `${data.countermeasure} — ${astro.display_name}, reading of ${formatTime(data.recordedAt)}.`;
+
+  const hrp = HRP_LINKS[metricId];
+  document.getElementById('modal-hrp-risk').textContent = hrp ? hrp.risk : '--';
+  document.getElementById('modal-hrp-hazard').textContent = hrp ? hrp.hazard : '--';
 
   const badge = document.getElementById('modal-status');
   badge.className = `status-badge ${data.status}`;

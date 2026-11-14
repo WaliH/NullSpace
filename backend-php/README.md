@@ -61,6 +61,8 @@ Pour revenir aux seules données de démonstration : `seed.bat --reset` (efface 
 | GET | `/api/health` | état du serveur et nombre de mesures |
 | GET | `/api/telemetry` | toutes les données, **même format que `data.json`** (+ champ `source` : `scenario` ou `watch`) |
 | POST | `/api/readings` | la montre envoie ses mesures |
+| GET | `/api/alerts` | historique des alertes (les plus récentes d'abord) |
+| POST | `/api/alerts/{id}/ack` | le contrôle au sol accuse réception d'une alerte |
 
 Filtres possibles sur `/api/telemetry` : `?astronaut_id=AST-01`, `?since=2026-11-14T12:00:00Z`, `?source=watch`.
 
@@ -82,6 +84,20 @@ En-tête obligatoire : `X-Device-Key: aura-demo-key` (modifiable dans `config.ph
 - Le serveur calcule lui-même le statut (`nominal` / `warning` / `critical`) avec les seuils de la table `vitals`. C'est la même règle que `computeStatus()` dans `frontend.js`.
 - Réponse `201` : les mesures enregistrées et la liste `alerts` (mesures hors seuils, avec la contre-mesure à appliquer).
 
+### Alertes
+
+Une alerte est créée automatiquement quand une mesure sort de ses seuils (warning ou critical). **Une alerte = un problème**, pas une mesure : tant qu'elle n'a pas reçu d'accusé de réception, les nouvelles mesures de la même constante pour le même astronaute la mettent à jour au lieu d'en créer une nouvelle. La montre envoyant des mesures toutes les quelques secondes, la liste ne déborde pas.
+
+Champs principaux : `status` (le pire statut atteint), `first_value` (première valeur hors seuil), `peak_value` (valeur la plus grave), `last_value` et `last_status` (dernière mesure, éventuellement revenue à `nominal`), `readings_count`, `countermeasure`, `acknowledged_at`, `acknowledged_by`, `ack_note`.
+
+Filtres de `GET /api/alerts` : `?state=open|acknowledged|all`, `?astronaut_id=AST-01`, `?source=watch|scenario`, `?limit=50`.
+
+Accusé de réception : `POST /api/alerts/12/ack` avec, en option, `{"acknowledged_by": "Flight Surgeon", "note": "Crew told to rest"}`. Réponse `200` avec l'alerte mise à jour, `409` si l'accusé de réception a déjà été fait, `404` si l'alerte n'existe pas. Aucune clé n'est demandée : dans ce prototype, le tableau de bord n'est accessible que sur le PC ou le réseau de l'équipe.
+
+Sur le site, les alertes apparaissent dans le panneau **Module 02 // Alert Archive**, sous le journal. On peut accuser réception depuis ce panneau ou avec le bouton « Acknowledge & Close » de la fenêtre d'une carte.
+
+Le scénario de démo (`data.json`) crée aussi ses propres alertes au moment de l'import. Si votre base date d'avant cette version, lancez **`seed.bat`** une fois pour les créer.
+
 Test rapide dans **PowerShell** :
 ```powershell
 $body = '{"astronaut_id":"AST-02","readings":[{"vital_id":"heart_rate","value":120}]}'
@@ -100,6 +116,7 @@ backend-php/
   router.php             point d'entrée du serveur PHP : /api/... → API, le reste → dossier frontend
   src/db.php             base SQLite, création des tables, calcul des statuts
   src/api.php            les routes de l'API
+  src/alerts.php         création, regroupement et liste des alertes
   bin/seed.php           import de data.json
   bin/simulate-watch.php simulateur de montre
   data/                  la base aurawatch.sqlite (non versionnée)

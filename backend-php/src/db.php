@@ -1,6 +1,8 @@
 <?php
 // Database access (SQLite through PDO).
 
+require_once __DIR__ . '/alerts.php';
+
 function aura_config(): array
 {
     static $config = null;
@@ -84,6 +86,7 @@ function aura_create_schema(PDO $pdo): void
         CREATE INDEX IF NOT EXISTS idx_readings_lookup
             ON readings (astronaut_id, vital_id, recorded_at);
     ");
+    aura_create_alerts_schema($pdo);
 }
 
 // Status from the thresholds. Must stay identical to computeStatus() in frontend/frontend.js.

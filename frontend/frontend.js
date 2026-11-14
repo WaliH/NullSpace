@@ -5,6 +5,9 @@
 // Both return the same JSON shape: { meta, astronauts, vitals, readings }.
 const DATA_SOURCES = ['/api/telemetry', 'data.json'];
 const LIVE_POLL_MS = 5000;    // how often the backend is asked for new watch readings
+const ALERTS_URL = '/api/alerts';
+const ACK_OPERATOR = 'Mission Control';  // name stored with each acknowledgment
+const ALERT_LOG_ROWS = 6;     // alerts shown in the archive panel
 
 // How each card on the page maps to the vitals in the data file.
 // The card ids (blood_pressure, sleep_mood) are the ones used in index.html.
@@ -45,6 +48,8 @@ let LIVE_SERIES = {};
 let LIVE_LATEST_TIME = null;  // time of the newest watch reading, or null
 let dataSource = null;        // which entry of DATA_SOURCES answered
 let mode = 'scenario';        // 'scenario' | 'live'
+let ALERTS = [];              // from GET /api/alerts (empty without the backend)
+let activeModalAlertId = null;
 let ASTRO_BY_PROFILE = {};    // 'male' | 'female' -> astronaut row
 let BASELINE_TIME = null;     // last hour of day 1
 let REPLAY_TIMES = [];        // every hour of the last day
@@ -63,6 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupCardEvents();
   setupInteractiveBodyNodes();
   setupModalEvents();
+  setupAlertLogEvents();
 
   try {
     await loadData();
@@ -153,6 +159,8 @@ async function loadData() {
   SCENARIO_SERIES = groupSeries(scenario);
   LIVE_SERIES = groupSeries(live);
   LIVE_LATEST_TIME = live.length ? live.map(r => r.recorded_at).sort().pop() : null;
+
+  ALERTS = hasBackend() ? await fetchAlerts() : [];
 
   ASTRO_BY_PROFILE = {
     male: DATA.astronauts.find(a => a.sex === 'M'),
@@ -333,6 +341,7 @@ function renderVitals() {
   });
 
   updateReadinessRing(metrics);
+  renderAlertLog();
 
   if (activeModalMetricId && !document.getElementById('medical-modal').classList.contains('hidden')) {
     fillModal(activeModalMetricId, metrics);
@@ -480,8 +489,17 @@ function setupModalEvents() {
 function acknowledgeAndClose() {
   const modal = document.getElementById('medical-modal');
   if (modal) modal.classList.add('hidden');
+  const alertId = activeModalAlertId;
   activeModalMetricId = null;
-  updateTerminalFeed('Protocol acknowledged by crew — committed to the flight archive.');
+  activeModalAlertId = null;
+
+  if (alertId) {
+    acknowledgeAlert(alertId);
+  } else if (hasBackend()) {
+    updateTerminalFeed('Protocol reviewed — no open alert for this vital.');
+  } else {
+    updateTerminalFeed('Protocol acknowledged by crew — committed to the flight archive.');
+  }
 }
 
 function openModal(metricId) {
@@ -504,6 +522,191 @@ function fillModal(metricId, metrics) {
   const badge = document.getElementById('modal-status');
   badge.className = `status-badge ${data.status}`;
   badge.textContent = data.status.toUpperCase();
+
+  // Link the dialog to the open alert of this card, if there is one.
+  const alert = openAlertForCard(metricId);
+  activeModalAlertId = alert ? alert.id : null;
+  const stamp = document.getElementById('modal-id-stamp');
+  const button = document.getElementById('btn-modal-dismiss');
+  if (hasBackend()) {
+    if (stamp) {
+      stamp.textContent = alert
+        ? `ALERT #${alert.id} // OPEN SINCE ${formatTime(alert.recorded_at)}`
+        : 'DECISION-SUPPORT // NO OPEN ALERT';
+    }
+    if (button) button.textContent = alert ? 'Acknowledge & Close' : 'Close';
+  }
+}
+
+// ---------- Alerts (backend only) ----------
+// The backend creates an alert when a reading leaves its thresholds; mission control
+// acknowledges it from the dialog or from the archive panel (POST /api/alerts/{id}/ack).
+
+function hasBackend() {
+  return !!dataSource && dataSource !== 'data.json';
+}
+
+async function fetchAlerts() {
+  try {
+    const res = await fetch(`${ALERTS_URL}?state=all&limit=200`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()).alerts || [];
+  } catch (err) {
+    console.warn('Alerts could not be loaded', err);
+    return ALERTS;
+  }
+}
+
+// Alerts matching what is on screen: watch alerts in live mode,
+// scenario alerts already "happened" at the displayed time otherwise.
+function visibleAlerts() {
+  const source = mode === 'live' ? 'watch' : 'scenario';
+  return ALERTS
+    .filter(a => a.source === source && (mode === 'live' || a.recorded_at <= currentTime))
+    .map(alertView)
+    .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at) || b.id - a.id);
+}
+
+function openAlertForCard(cardId) {
+  const astro = currentAstronaut();
+  const vitals = (CARD_MAP[cardId] || {}).vitals || [];
+  const candidates = visibleAlerts().filter(a =>
+    !a.acknowledged && a.astronaut_id === astro.astronaut_id && vitals.includes(a.vital_id));
+  candidates.sort((a, b) => STATUS_RANK[b.status] - STATUS_RANK[a.status]);
+  return candidates[0] || null;
+}
+
+// What an alert looks like at the displayed time.
+// Live mode: the server's values. Scenario mode: recomputed from the scenario readings up to
+// currentTime, so the replay never shows values that have not "happened" yet.
+function alertView(alert) {
+  if (mode === 'live') return alert;
+  const list = ((SCENARIO_SERIES[alert.astronaut_id] || {})[alert.vital_id] || [])
+    .filter(r => r.recorded_at >= alert.recorded_at && r.recorded_at <= currentTime);
+  if (!list.length) return alert;
+
+  let status = 'nominal';
+  let peak = list[0].value;
+  let count = 0;
+  list.forEach(r => {
+    const s = computeStatus(r.vital_id, r.value);
+    if (s !== 'nominal') count += 1;
+    if (STATUS_RANK[s] >= STATUS_RANK[status]) { status = s; peak = r.value; }
+  });
+  const last = list[list.length - 1];
+  return {
+    ...alert,
+    status,
+    peak_value: peak,
+    last_value: last.value,
+    last_status: computeStatus(last.vital_id, last.value),
+    readings_count: count
+  };
+}
+
+function alertValueText(a) {
+  const unit = UNIT_LABELS[a.unit] || a.unit;
+  const fmt = v => formatValue(a.vital_id, v);
+  const parts = [`${fmt(a.first_value)} ${unit}`];
+  if (a.peak_value !== a.first_value) parts.push(`peak ${fmt(a.peak_value)}`);
+  if (a.last_value !== a.peak_value) parts.push(`now ${fmt(a.last_value)}`);
+  return parts.join(' · ');
+}
+
+function renderAlertLog() {
+  const panel = document.getElementById('alert-log');
+  const list = document.getElementById('alert-log-list');
+  const count = document.getElementById('alert-log-count');
+  if (!panel || !list) return;
+
+  panel.classList.toggle('hidden', !hasBackend());
+  if (!hasBackend()) return;
+
+  const alerts = visibleAlerts();
+  const open = alerts.filter(a => !a.acknowledged).length;
+  if (count) {
+    count.textContent = `${open} open · ${alerts.length} total`;
+    count.classList.toggle('has-open', open > 0);
+  }
+
+  list.replaceChildren();
+  if (!alerts.length) {
+    const li = document.createElement('li');
+    li.className = 'alert-log-empty';
+    li.textContent = 'No alert recorded for this window.';
+    list.appendChild(li);
+    return;
+  }
+
+  alerts.slice(0, ALERT_LOG_ROWS).forEach(a => {
+    const li = document.createElement('li');
+    li.className = `alert-row${a.acknowledged ? ' acknowledged' : ''}`;
+
+    const badge = document.createElement('span');
+    badge.className = `status-badge ${a.acknowledged ? 'nominal' : a.status}`;
+    badge.textContent = a.status.toUpperCase();
+
+    const main = document.createElement('div');
+    main.className = 'alert-main';
+    const title = document.createElement('span');
+    title.className = 'alert-title';
+    title.textContent = `${a.display_name} — ${a.vital_label}: ${alertValueText(a)}`;
+    const meta = document.createElement('span');
+    meta.className = 'alert-meta';
+    meta.textContent = `#${a.id} · ${formatTime(a.recorded_at)} · ${a.readings_count} reading${a.readings_count > 1 ? 's' : ''}`
+      + (a.last_status === 'nominal' ? ' · back to nominal' : '');
+    main.append(title, meta);
+
+    let action;
+    if (a.acknowledged) {
+      action = document.createElement('span');
+      action.className = 'alert-ack-state';
+      action.textContent = `ACK ${a.acknowledged_at.slice(11, 16)} · ${a.acknowledged_by}`;
+    } else {
+      action = document.createElement('button');
+      action.className = 'alert-ack-btn';
+      action.dataset.alertId = a.id;
+      action.textContent = 'ACKNOWLEDGE';
+    }
+
+    li.append(badge, main, action);
+    list.appendChild(li);
+  });
+}
+
+function setupAlertLogEvents() {
+  const list = document.getElementById('alert-log-list');
+  if (!list) return;
+  list.addEventListener('click', (e) => {
+    const btn = e.target.closest('.alert-ack-btn');
+    if (!btn) return;
+    btn.disabled = true;
+    acknowledgeAlert(Number(btn.dataset.alertId));
+  });
+}
+
+async function acknowledgeAlert(id) {
+  try {
+    const res = await fetch(`${ALERTS_URL}/${id}/ack`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acknowledged_by: ACK_OPERATOR })
+    });
+    const json = await res.json();
+    if (json.alert) {
+      ALERTS = ALERTS.map(a => (a.id === id ? json.alert : a));
+    }
+    if (!res.ok && res.status !== 409) throw new Error(json.error || `HTTP ${res.status}`);
+
+    const a = json.alert;
+    updateTerminalFeed(
+      `Alert #${id} acknowledged by ${a.acknowledged_by} — ${a.display_name}, ${a.vital_label}. Committed to the flight archive.`
+    );
+  } catch (err) {
+    console.error(err);
+    updateTerminalFeed(`ACK FAILED for alert #${id}: ${err.message}`, true);
+  }
+  renderAlertLog();
 }
 
 // ---------- Terminal ----------

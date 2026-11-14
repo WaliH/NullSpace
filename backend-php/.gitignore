@@ -1,0 +1,5 @@
+# Local SQLite database (recreated by bin/seed.php)
+data/*.sqlite
+data/*.sqlite-journal
+data/*.sqlite-wal
+data/*.sqlite-shm

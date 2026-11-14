@@ -621,6 +621,24 @@
             <span class="btn-flare-icon">⚡</span>
             <span>Simulate Solar Flare (SPE)</span>
           </button>
+
+          <!-- Live watch simulator, started by the PHP server (backend only, hidden otherwise). -->
+          <div id="watch-sim" class="watch-sim hidden">
+            <div class="sim-meta">
+              <span class="sim-title">Live Watch Simulator</span>
+              <span class="sim-desc">Runs the watch simulator (sensor-cpp) on the server PC: live packets every 3 s for 2 min, with an optional crisis.</span>
+            </div>
+            <div class="watch-sim-row">
+              <select id="watch-sim-crisis" class="watch-sim-select" aria-label="Crisis scenario">
+                <option value="all">Crisis: both astronauts</option>
+                <option value="alpha">Crisis: Alpha (fever)</option>
+                <option value="bravo">Crisis: Bravo (cardiovascular)</option>
+                <option value="none">No crisis (nominal values)</option>
+              </select>
+              <button id="btn-watch-sim" class="btn-watch-sim">&#9654; Run</button>
+            </div>
+            <span id="watch-sim-status" class="watch-sim-status"></span>
+          </div>
         </div>
 
       </div>

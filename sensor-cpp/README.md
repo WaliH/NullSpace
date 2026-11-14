@@ -2,15 +2,21 @@
 
 En attendant le vrai matériel, ce dossier contient un **simulateur de montre** en C++. Il génère des mesures pour les deux astronautes et les envoie au backend (`POST /api/readings`), comme le fera la vraie montre. C'est l'équivalent C++ de `backend-php\simulate-watch.bat` : mêmes options, mêmes valeurs, même API.
 
-Aucune bibliothèque externe : C++17 standard + Winsock (inclus dans Windows).
+En plus, il fait ce que ferait une vraie montre loin de la Terre :
+- **vérification à bord** (`checkOnBoard()`) : chaque mesure hors seuil déclenche une alerte locale sur la montre, même sans liaison avec la Terre ;
+- **file d'attente locale** (`std::deque`) : un paquet ne quitte la montre qu'une fois enregistré par le serveur. Si le serveur ne répond pas, les paquets attendent et partent dans l'ordre au prochain envoi (500 paquets max) ;
+- **coupure de liaison simulée** : `--outage=A:B` coupe la liaison de l'heure A à l'heure B ;
+- **éruption solaire** : un envoi = une heure de mission. Pendant les heures 30 à 36, la dose de radiation des deux astronautes monte (warning au-dessus de 1 mSv/jour, critique au-dessus de 2). Avec le bouton du site (40 envois), l'éruption arrive donc vers la fin.
+
+Aucune bibliothèque externe : C++17 standard + Winsock (inclus dans Windows). Tout est dans `simulator.cpp`.
 
 ## Fichiers
 
 ```
 sensor-cpp/
   simulator.cpp     le simulateur (programme principal)
-  aura_client.hpp   client HTTP minimal : construit le JSON et l'envoie au backend
-                    (réutilisable pour la vraie montre si elle tourne sur un PC ou un Raspberry Pi)
+  aura_client.hpp   client HTTP minimal, réutilisable dans un autre programme
+                    (simulator.cpp ne l'utilise plus : il a sa propre classe Link)
   build.bat         compile simulator.exe sous Windows
   run-simulator.bat lance simulator.exe (double-clic)
   run-crisis.bat    lance simulator.exe --crisis=all : crise pour les deux astronautes (double-clic)
@@ -44,15 +50,22 @@ Avec MinGW, `-lws2_32` est obligatoire (bibliothèque réseau de Windows). `-sta
    simulator.exe --crisis=all      les deux crises en même temps
    simulator.exe --interval=2      un envoi toutes les 2 s
    simulator.exe --count=10        s'arrête après 10 envois
+   simulator.exe --count=40 --outage=28:31   liaison coupée des heures 28 à 31, puis la file est vidée
    simulator.exe --url=http://localhost:8787 --key=aura-demo-key
    ```
 3. Le tableau de bord (http://localhost:8787) passe en mode live et se met à jour tout seul.
 
-Exemple de sortie en mode crise :
+Exemple de sortie (crise + coupure de liaison) :
 ```
-[2026-11-14T12:34:35Z] AST-02: 5 readings - ALERT: heart_rate=94 warning
-[2026-11-14T12:34:38Z] AST-02: 5 readings - ALERT: heart_rate=112 critical, systolic_bp=148 warning
+[2026-11-14T14:09:29Z] hour 31  *** SOLAR ERUPTION ***  [LINK DOWN]
+    !! WATCH ALERT CRITICAL  AST-02 Heart Rate = 130 BPM  (watch vibrates)
+    link down: 8 packet(s) kept in the watch queue
+[2026-11-14T14:09:30Z] hour 32  *** SOLAR ERUPTION ***
+     ! watch alert warning   AST-02 Radiation Dose = 1.29 mSv/day
+    AST-02: 5 readings (queued since hour 28) - ALERT: heart_rate=130 critical, systolic_bp=160 critical
+    AST-02: 6 readings - ALERT: heart_rate=130 critical, systolic_bp=160 critical, radiation_dose=1.29 warning
 ```
+Les lignes `WATCH ALERT` viennent de la montre elle-même ; les lignes `ALERT:` sont la réponse du serveur.
 
 ## Ce que le programme envoie
 
@@ -66,9 +79,21 @@ Exemple de sortie en mode crise :
   ]
 }
 ```
-Avec l'en-tête `X-Device-Key: aura-demo-key`. Les constantes possibles sont `heart_rate`, `systolic_bp`, `diastolic_bp`, `blood_glucose`, `body_temp`, `sleep_hours`, `bone_load` et `radiation_dose`. Les mesures de sommeil, d'exercice et de radiation ne sont envoyées qu'au premier envoi, car ce sont des valeurs quotidiennes.
+Avec l'en-tête `X-Device-Key: aura-demo-key`. Les constantes possibles sont `heart_rate`, `systolic_bp`, `diastolic_bp`, `blood_glucose`, `body_temp`, `sleep_hours`, `bone_load` et `radiation_dose`. Les mesures de sommeil, d'exercice et de radiation ne sont envoyées qu'au premier envoi, car ce sont des valeurs quotidiennes ; la radiation est renvoyée à chaque heure de l'éruption solaire. `recorded_at` est l'heure de la mesure : un paquet resté dans la file garde son heure d'origine.
 
-## Réutiliser le client dans un autre programme
+## Organisation de `simulator.cpp`
+
+| Élément | Rôle |
+|---|---|
+| `Sensors::sample()` | génère les mesures d'une heure (marche aléatoire, crises, éruption solaire heures 30–36) |
+| `computeStatus()` | nominal / warning / critical, même règle que `frontend.js` et `db.php` |
+| `checkOnBoard()` | alerte locale sur la montre |
+| `std::deque` dans `main()` | file d'attente locale (store-and-forward) |
+| `--outage=A:B` | coupure de liaison simulée |
+| `Link::send()` | POST HTTP + clé `X-Device-Key`, sockets (Winsock), sans libcurl |
+| `Packet::toJson()` / `isoTime()` | corps JSON + horodatage ISO UTC |
+
+## Réutiliser `aura_client.hpp` dans un autre programme
 
 ```cpp
 #include "aura_client.hpp"

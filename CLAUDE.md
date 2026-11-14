@@ -16,8 +16,9 @@ frontend/
   data.json      → données simulées (doit rester À CÔTÉ de index.html)
 backend-php/     → backend PHP + SQLite : reçoit les mesures de la montre, sert l'API et le site
                    (détails et installation Windows : backend-php/README.md)
-sensor-cpp/      → code C++ de la montre : pour l'instant simulator.cpp (simulateur de montre)
-                   + aura_client.hpp (client HTTP sans dépendance, Winsock). Compilation : build.bat
+sensor-cpp/      → code C++ de la montre : simulator.cpp (simulateur de montre, autonome : capteurs,
+                   vérification à bord, file locale, client HTTP Winsock) + aura_client.hpp (client HTTP
+                   réutilisable, plus utilisé par simulator.cpp). Compilation : build.bat
 ```
 Le frontend est 100 % statique, sans framework ni build, JavaScript vanilla.
 
@@ -56,7 +57,8 @@ puis ouvrir http://localhost:8000 (ou l'extension Live Server de VS Code). Le si
 - `GET /api/health` → vérification rapide.
 - Port par défaut **8787** (pas 8080, souvent pris sous Windows par Tomcat/XAMPP, Oracle…) : `PORT` dans `start-server.bat` et `port` dans `config.php` doivent rester identiques.
 - `bin/seed.php` importe `frontend/data.json` (`--reset` efface aussi les mesures de la montre). `bin/simulate-watch.php` simule la montre.
-- Le simulateur C++ (`sensor-cpp/simulator.cpp`) envoie exactement le même format et les mêmes valeurs que `bin/simulate-watch.php` : garder les deux en accord.
+- Le simulateur C++ (`sensor-cpp/simulator.cpp`) envoie exactement le même format et les mêmes valeurs que `bin/simulate-watch.php` : garder les deux en accord. Un envoi = une heure de mission ; éruption solaire aux heures 30–36 (`FLARE_DOSE` : la dose de radiation monte jusqu'au critique, dans les deux simulateurs).
+  En plus, le C++ seul a : `checkOnBoard()` (alerte locale), une file `std::deque` (un paquet n'en sort qu'après un 201 ; erreur réseau/5xx → on réessaie au prochain envoi ; autre 4xx → abandonné) et `--outage=A:B` (liaison coupée des heures A à B). Ses seuils (`VITALS`) et `computeStatus()` doivent rester identiques à ceux de `data.json` / `db.php`.
 - `aura_compute_status()` (`src/db.php`) et `computeStatus()` (`frontend.js`) appliquent la même règle : les modifier ensemble.
 
 ## Fonctionnement de `frontend.js`

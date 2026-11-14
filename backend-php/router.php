@@ -1,7 +1,7 @@
 <?php
 // Entry point for PHP's built-in web server (works the same on Windows and Linux):
 //
-//   php -S localhost:8080 -t ../frontend router.php
+//   php -S localhost:8787 -t ../frontend router.php
 //
 // - /api/...  → handled by src/api.php
 // - anything else → served from the frontend folder (index.html, CSS, JS, data.json)

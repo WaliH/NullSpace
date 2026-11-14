@@ -2,6 +2,10 @@
 setlocal
 cd /d "%~dp0"
 
+rem Port of the local server. 8787 avoids 8080, often taken by Tomcat (XAMPP), Oracle, Jenkins...
+rem If you change it, change "port" in config.php too (used by the watch simulator).
+set "PORT=8787"
+
 rem --- Find php.exe: first in PATH, then in XAMPP's default folder ---
 set "PHP=php"
 where php >nul 2>nul
@@ -34,9 +38,24 @@ if not exist "data\aurawatch.sqlite" (
   if errorlevel 1 ( pause & exit /b 1 )
 )
 
+rem --- Make sure the port is free (another program would answer instead of AuraWatch) ---
+netstat -ano | findstr /r /c:":%PORT% .*LISTENING" >nul
+if not errorlevel 1 (
+  echo [AuraWatch] Port %PORT% is already used by another program:
+  netstat -ano | findstr /r /c:":%PORT% .*LISTENING"
+  echo             The last number is the program's PID ^(see Task Manager, "Details" tab^).
+  echo             Close that program, or change PORT at the top of start-server.bat and "port" in config.php.
+  pause
+  exit /b 1
+)
+
 echo.
-echo [AuraWatch] Dashboard : http://localhost:8080
-echo [AuraWatch] API       : http://localhost:8080/api/health
+echo [AuraWatch] Dashboard : http://localhost:%PORT%
+echo [AuraWatch] API       : http://localhost:%PORT%/api/health
 echo [AuraWatch] Stop with Ctrl+C
 echo.
-"%PHP%" -S localhost:8080 -t ..\frontend router.php
+start "" "http://localhost:%PORT%"
+"%PHP%" -S localhost:%PORT% -t ..\frontend router.php
+
+rem Only reached if the server stops or fails to start: keep the window open to read the message.
+pause

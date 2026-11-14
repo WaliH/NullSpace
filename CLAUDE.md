@@ -16,7 +16,8 @@ frontend/
   data.json      → données simulées (doit rester À CÔTÉ de index.html)
 backend-php/     → backend PHP + SQLite : reçoit les mesures de la montre, sert l'API et le site
                    (détails et installation Windows : backend-php/README.md)
-sensor-cpp/      → futur code C++ de la montre / des capteurs (vide pour l'instant)
+sensor-cpp/      → code C++ de la montre : pour l'instant simulator.cpp (simulateur de montre)
+                   + aura_client.hpp (client HTTP sans dépendance, Winsock). Compilation : build.bat
 ```
 Le frontend est 100 % statique, sans framework ni build, JavaScript vanilla.
 
@@ -25,7 +26,7 @@ chemins avec `\` dans les exemples, scripts `.bat` (fins de ligne CRLF, imposée
 pas de commandes propres à Linux. En PHP, construire les chemins avec `__DIR__`.
 
 ## Lancer le site
-Avec le backend (recommandé) : double-cliquer sur `backend-php\start-server.bat`, puis ouvrir http://localhost:8080.
+Avec le backend (recommandé) : double-cliquer sur `backend-php\start-server.bat`, puis ouvrir http://localhost:8787.
 Le simulateur de montre : `backend-php\simulate-watch.bat` (option `--crisis` pour déclencher des alertes).
 
 Sans backend : le site doit quand même être servi en HTTP (pas en `file://`) :
@@ -47,11 +48,13 @@ puis ouvrir http://localhost:8000 (ou l'extension Live Server de VS Code). Le si
 
 ## Backend (`backend-php/`)
 - PHP 8 sans dépendance, base SQLite (`data/aurawatch.sqlite`, non versionnée), lancé avec le serveur intégré :
-  `php -S localhost:8080 -t ..\frontend router.php` (`router.php` envoie `/api/...` vers `src/api.php`, le reste vers `frontend/`).
+  `php -S localhost:8787 -t ..\frontend router.php` (`router.php` envoie `/api/...` vers `src/api.php`, le reste vers `frontend/`).
 - `GET /api/telemetry` → même format que `data.json`, avec un champ `source` en plus sur chaque mesure : `scenario` (données de démo) ou `watch` (envoyée par la montre).
 - `POST /api/readings` (en-tête `X-Device-Key`) → la montre envoie `{astronaut_id, recorded_at?, readings:[{vital_id, value}]}`. Le serveur recalcule le statut.
 - `GET /api/health` → vérification rapide.
+- Port par défaut **8787** (pas 8080, souvent pris sous Windows par Tomcat/XAMPP, Oracle…) : `PORT` dans `start-server.bat` et `port` dans `config.php` doivent rester identiques.
 - `bin/seed.php` importe `frontend/data.json` (`--reset` efface aussi les mesures de la montre). `bin/simulate-watch.php` simule la montre.
+- Le simulateur C++ (`sensor-cpp/simulator.cpp`) envoie exactement le même format et les mêmes valeurs que `bin/simulate-watch.php` : garder les deux en accord.
 - `aura_compute_status()` (`src/db.php`) et `computeStatus()` (`frontend.js`) appliquent la même règle : les modifier ensemble.
 
 ## Fonctionnement de `frontend.js`

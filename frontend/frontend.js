@@ -1,7 +1,10 @@
 // AuraWatch — telemetry front end.
-// All readings come from data.json (generated from AuraWatch_data.xlsx / seed.sql).
-// Later, point DATA_URL to the backend API that returns the same JSON shape.
-const DATA_URL = 'data.json';
+// Data sources, tried in order:
+//   1. /api/telemetry — the PHP backend (backend-php/), which also stores what the watch sends
+//   2. data.json      — static file, used when the page is served without the backend
+// Both return the same JSON shape: { meta, astronauts, vitals, readings }.
+const DATA_SOURCES = ['/api/telemetry', 'data.json'];
+const LIVE_POLL_MS = 5000;    // how often the backend is asked for new watch readings
 
 // How each card on the page maps to the vitals in the data file.
 // The card ids (blood_pressure, sleep_mood) are the ones used in index.html.
@@ -34,7 +37,14 @@ const SPARK_POINTS = 12;      // hours of history drawn in each sparkline
 
 let DATA = null;              // { astronauts, vitals, readings }
 let VITALS = {};              // vital_id -> vital row
-let SERIES = {};              // astronaut_id -> vital_id -> readings sorted by time
+// Readings are split in two sets:
+//   scenario → the demo data (day 1 baseline + last day solar-event replay)
+//   live     → readings sent by the watch (source === 'watch'), only when the backend is used
+let SCENARIO_SERIES = {};     // astronaut_id -> vital_id -> readings sorted by time
+let LIVE_SERIES = {};
+let LIVE_LATEST_TIME = null;  // time of the newest watch reading, or null
+let dataSource = null;        // which entry of DATA_SOURCES answered
+let mode = 'scenario';        // 'scenario' | 'live'
 let ASTRO_BY_PROFILE = {};    // 'male' | 'female' -> astronaut row
 let BASELINE_TIME = null;     // last hour of day 1
 let REPLAY_TIMES = [];        // every hour of the last day
@@ -58,41 +68,98 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadData();
   } catch (err) {
     console.error(err);
-    updateTerminalFeed('TELEMETRY LINK DOWN: data.json could not be loaded. Serve the site over HTTP (not file://).', true);
+    updateTerminalFeed('TELEMETRY LINK DOWN: no data source answered. Serve the site over HTTP (not file://).', true);
     return;
   }
 
-  currentTime = BASELINE_TIME;
-  renderVitals();
+  showDefaultView();
   applyFilter(currentFilter);
-  updateTerminalFeed(`Telemetry synchronized — ${DATA.astronauts.length} crew nodes online. Last sync ${formatTime(currentTime)}.`);
+  const origin = dataSource === 'data.json' ? 'static data.json' : 'AuraWatch backend';
+  updateTerminalFeed(
+    mode === 'live'
+      ? `Live downlink (${origin}) — ${DATA.astronauts.length} crew nodes. Last watch packet ${formatTime(currentTime)}.`
+      : `Telemetry synchronized (${origin}) — ${DATA.astronauts.length} crew nodes online. Last sync ${formatTime(currentTime)}.`
+  );
+
+  if (dataSource !== 'data.json') setInterval(pollLive, LIVE_POLL_MS);
 });
+
+// Live watch data when there is some, otherwise the day 1 baseline of the scenario.
+function showDefaultView() {
+  mode = LIVE_LATEST_TIME ? 'live' : 'scenario';
+  currentTime = mode === 'live' ? LIVE_LATEST_TIME : BASELINE_TIME;
+  renderVitals();
+}
+
+// Asks the backend for new watch readings. Paused while the solar-event replay is on screen.
+async function pollLive() {
+  if (isCrisisActive) return;
+  const previousLatest = LIVE_LATEST_TIME;
+  try {
+    await loadData();
+  } catch (err) {
+    console.warn('Live poll failed', err);
+    return;
+  }
+  if (isCrisisActive || LIVE_LATEST_TIME === previousLatest) return;
+  showDefaultView();
+  updateTerminalFeed(`${LIVE_LATEST_TIME.slice(11, 19)} UTC — watch packet received from the crew.`);
+}
 
 // ---------- Data ----------
 
+async function fetchTelemetry() {
+  const sources = dataSource ? [dataSource] : DATA_SOURCES;
+  let lastError = null;
+  for (const url of sources) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status} while loading ${url}`);
+      const json = await res.json();
+      if (!json.readings || !json.readings.length) throw new Error(`${url} returned no readings`);
+      dataSource = url;
+      return json;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError;
+}
+
+function groupSeries(readings) {
+  const series = {};
+  readings.forEach(r => {
+    const byVital = series[r.astronaut_id] || (series[r.astronaut_id] = {});
+    (byVital[r.vital_id] || (byVital[r.vital_id] = [])).push(r);
+  });
+  Object.values(series).forEach(byVital =>
+    Object.values(byVital).forEach(list => list.sort((a, b) => a.recorded_at.localeCompare(b.recorded_at)))
+  );
+  return series;
+}
+
+function activeSeries() {
+  return mode === 'live' ? LIVE_SERIES : SCENARIO_SERIES;
+}
+
 async function loadData() {
-  const res = await fetch(DATA_URL, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`HTTP ${res.status} while loading ${DATA_URL}`);
-  DATA = await res.json();
+  DATA = await fetchTelemetry();
 
   VITALS = {};
   DATA.vitals.forEach(v => { VITALS[v.vital_id] = v; });
 
-  SERIES = {};
-  DATA.readings.forEach(r => {
-    const byVital = SERIES[r.astronaut_id] || (SERIES[r.astronaut_id] = {});
-    (byVital[r.vital_id] || (byVital[r.vital_id] = [])).push(r);
-  });
-  Object.values(SERIES).forEach(byVital =>
-    Object.values(byVital).forEach(list => list.sort((a, b) => a.recorded_at.localeCompare(b.recorded_at)))
-  );
+  const scenario = DATA.readings.filter(r => r.source !== 'watch');
+  const live = DATA.readings.filter(r => r.source === 'watch');
+  SCENARIO_SERIES = groupSeries(scenario);
+  LIVE_SERIES = groupSeries(live);
+  LIVE_LATEST_TIME = live.length ? live.map(r => r.recorded_at).sort().pop() : null;
 
   ASTRO_BY_PROFILE = {
     male: DATA.astronauts.find(a => a.sex === 'M'),
     female: DATA.astronauts.find(a => a.sex === 'F')
   };
 
-  const times = [...new Set(DATA.readings.map(r => r.recorded_at))].sort();
+  const times = [...new Set(scenario.map(r => r.recorded_at))].sort();
   const firstDay = times[0].slice(0, 10);
   const lastDay = times[times.length - 1].slice(0, 10);
   BASELINE_TIME = times.filter(t => t.startsWith(firstDay)).pop();
@@ -118,7 +185,7 @@ function currentAstronaut() {
 
 // Latest reading of a vital at or before the given time.
 function latestReading(astronautId, vitalId, time) {
-  const list = (SERIES[astronautId] || {})[vitalId] || [];
+  const list = (activeSeries()[astronautId] || {})[vitalId] || [];
   let found = null;
   for (const r of list) {
     if (r.recorded_at > time) break;
@@ -128,7 +195,7 @@ function latestReading(astronautId, vitalId, time) {
 }
 
 function history(astronautId, vitalId, time, count) {
-  const list = (SERIES[astronautId] || {})[vitalId] || [];
+  const list = (activeSeries()[astronautId] || {})[vitalId] || [];
   return list.filter(r => r.recorded_at <= time).slice(-count);
 }
 
@@ -215,6 +282,17 @@ function renderVitals() {
   if (!DATA) return;
   const metrics = currentMetrics();
   const hotspotStatus = {};
+
+  // Cards with no reading yet (e.g. the watch has not sent that vital): show "--".
+  Object.keys(CARD_MAP).filter(id => !metrics[id]).forEach(id => {
+    const valEl = document.getElementById(`val-${id}`);
+    if (valEl) valEl.textContent = '--';
+    const badgeEl = document.getElementById(`status-${id}`);
+    if (badgeEl) {
+      badgeEl.className = 'status-badge';
+      badgeEl.textContent = 'NO DATA';
+    }
+  });
 
   Object.values(metrics).forEach(metric => {
     const valEl = document.getElementById(`val-${metric.id}`);
@@ -342,15 +420,18 @@ function bindFilterEvents() {
   });
 }
 
+// data-category may hold several categories separated by spaces (e.g. "immuno metabolic").
+function matchesFilter(el, filter) {
+  return filter === 'all' || (el.getAttribute('data-category') || '').split(/\s+/).includes(filter);
+}
+
 function applyFilter(filter) {
   document.querySelectorAll('.vital-card').forEach(card => {
-    const match = filter === 'all' || card.getAttribute('data-category') === filter;
-    card.classList.toggle('hidden', !match);
+    card.classList.toggle('hidden', !matchesFilter(card, filter));
   });
 
   document.querySelectorAll('.interactive-node').forEach(node => {
-    const match = filter === 'all' || node.getAttribute('data-category') === filter;
-    node.classList.toggle('dimmed', !match);
+    node.classList.toggle('dimmed', !matchesFilter(node, filter));
   });
 }
 
@@ -477,16 +558,22 @@ window.simulateSolarFlareCrisis = function () {
   if (isCrisisActive) {
     stopReplay();
     isCrisisActive = false;
-    currentTime = BASELINE_TIME;
     inspectedNodes.clear();
     setupInteractiveBodyNodes();
-    renderVitals();
+    showDefaultView();
     setFlareButton('idle');
-    updateTerminalFeed(`Baseline restored — telemetry of ${formatTime(currentTime)}. All crew nodes polling.`);
+    updateTerminalFeed(
+      mode === 'live'
+        ? `Live downlink restored — last watch packet ${formatTime(currentTime)}.`
+        : `Baseline restored — telemetry of ${formatTime(currentTime)}. All crew nodes polling.`
+    );
     return;
   }
 
+  // The replay always uses the scenario data, starting from the day 1 baseline.
   isCrisisActive = true;
+  mode = 'scenario';
+  currentTime = BASELINE_TIME;
   inspectedNodes.clear();
   setupInteractiveBodyNodes();
   setFlareButton('replaying');

@@ -65,6 +65,8 @@
         <div class="deck-filters">
           <span class="filter-chip active" data-filter="all">All</span>
           <span class="filter-chip" data-filter="cardio">Cardio</span>
+          <span class="filter-chip" data-filter="metabolic">Metabolic</span>
+          <span class="filter-chip" data-filter="immuno">Immuno</span>
           <span class="filter-chip" data-filter="neuro">Neuro</span>
           <span class="filter-chip" data-filter="musculo">Musculo</span>
         </div>
@@ -114,7 +116,7 @@
           </div>
         </article>
 
-        <article class="vital-card" data-metric-id="blood_glucose" data-category="neuro">
+        <article class="vital-card" data-metric-id="blood_glucose" data-category="metabolic">
           <div class="card-glass-specular"></div>
           <div class="card-meta">
             <span class="sensor-tag">GLU-03 &bull; Metabolism</span>
@@ -135,7 +137,7 @@
           </div>
         </article>
 
-        <article class="vital-card" data-metric-id="body_temp" data-category="cardio">
+        <article class="vital-card" data-metric-id="body_temp" data-category="immuno">
           <div class="card-glass-specular"></div>
           <div class="card-meta">
             <span class="sensor-tag">TMP-04 &bull; Radiation & Immuno</span>
@@ -203,7 +205,7 @@
       <div class="terminal-strip">
         <div class="terminal-dot"></div>
         <span class="terminal-title">AUTONOMOUS DECISION LOG:</span>
-        <span id="terminal-feed" class="terminal-content">Passive biosensor array polling nominal across all 6 crew nodes. Next sync Sol 142 22:00 UTC.</span>
+        <span id="terminal-feed" class="terminal-content">Passive biosensor array polling nominal across all crew nodes. Next sync Sol 142 22:00 UTC.</span>
       </div>
     </section>
 
@@ -546,7 +548,7 @@
               <path class="anatomical-detail" d="M 118,343 Q 124,348 130,343 M 150,343 Q 156,348 162,343" />
             </g>
 
-            <g class="hotspot-pointers" stroke="rgba(0, 240, 255, 0.4)" stroke-width="0.8" stroke-dasharray="3 3">
+            <g class="hotspot-pointers" fill="none" stroke="rgba(0, 240, 255, 0.4)" stroke-width="0.8" stroke-dasharray="3 3">
               <line x1="140" y1="42" x2="225" y2="40" />
               <polyline points="135,130 85,130 45,115" />
               <polyline points="140,175 190,175 225,190" />
@@ -565,7 +567,7 @@
               <text x="8" y="113" class="svg-label">CARDIO·01</text>
             </g>
 
-            <g class="interactive-node" data-metric-id="body_temp" data-category="cardio">
+            <g class="interactive-node" data-metric-id="body_temp" data-category="immuno metabolic">
               <circle class="ring-sonar" cx="140" cy="175" r="14" />
               <circle id="hotspot-immune" class="body-hotspot" cx="140" cy="175" r="5.5" data-metric-id="body_temp" data-status="nominal" />
               <text x="228" y="194" class="svg-label">IMMUNO·04</text>

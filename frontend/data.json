@@ -1,6 +1,6 @@
 {
  "meta": {
-  "project": "AuraWatch (Null Space)",
+  "project": "Project AURA (Null Space)",
   "notice": "All measurements are SIMULATED for the demo. Thresholds are illustrative, not NASA limits.",
   "time_zone": "UTC",
   "source": "AuraWatch_data.xlsx (same content as schema.sql / seed.sql)"

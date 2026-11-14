@@ -1,5 +1,5 @@
 <?php
-// Watch simulator: sends fake measurements to the API, like the real AuraWatch will.
+// Watch simulator: sends fake measurements to the API, like the real AURA watch will.
 // Useful for the demo while the hardware (sensor-cpp/) is not ready.
 //
 //   php bin/simulate-watch.php                 → one batch every 5 s, nominal values

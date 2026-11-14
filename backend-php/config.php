@@ -1,5 +1,5 @@
 <?php
-// AuraWatch backend configuration.
+// Project AURA backend configuration.
 // Paths use __DIR__ so they work the same on Windows and Linux.
 
 return [

@@ -1,4 +1,4 @@
-// AuraWatch — telemetry front end.
+// Project AURA — telemetry front end.
 // Data sources, tried in order:
 //   1. /api/telemetry — the PHP backend (backend-php/), which also stores what the watch sends
 //   2. data.json      — static file, used when the page is served without the backend
@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   showDefaultView();
   applyFilter(currentFilter);
-  const origin = dataSource === 'data.json' ? 'static data.json' : 'AuraWatch backend';
+  const origin = dataSource === 'data.json' ? 'static data.json' : 'AURA backend';
   updateTerminalFeed(
     mode === 'live'
       ? `Live downlink (${origin}) — ${DATA.astronauts.length} crew nodes. Last watch packet ${formatTime(currentTime)}.`

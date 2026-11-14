@@ -1,8 +1,8 @@
-# AuraWatch — health monitoring for astronauts
+# Project AURA — health monitoring for astronauts
 
 **NASA Space Apps Challenge 2026 · Team Null Space**
 
-AuraWatch is a watch worn by each astronaut. It measures their vital signs and sends them to Earth, where mission control follows the crew's health on a web dashboard (**AURA // HRP·OS**). The dashboard flags readings that leave their safe range, shows the countermeasure to apply, and keeps an archive of alerts that ground control acknowledges.
+Project AURA is built around a watch worn by each astronaut. It measures their vital signs and sends them to Earth, where mission control follows the crew's health on a web dashboard (**AURA // HRP·OS**). The dashboard flags readings that leave their safe range, shows the countermeasure to apply, and keeps an archive of alerts that ground control acknowledges.
 
 > ⚠️ **All data is simulated** for this prototype, and the thresholds are **illustrative**: they are **not** official NASA limits.
 

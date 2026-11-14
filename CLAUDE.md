@@ -1,9 +1,9 @@
-# AuraWatch — contexte projet pour Claude Code
+# Project AURA — contexte projet pour Claude Code
 
 ## Le projet
 Équipe au hackathon **NASA Space Apps Challenge 2026**.
 Sujet : logiciel de suivi de santé pour astronautes en mission spatiale.
-Concept : une montre (AuraWatch) mesure les constantes de l'astronaute et les envoie vers la Terre ; toute la surveillance se fait sur un site web (tableau de bord « AURA // HRP·OS »).
+Concept : une montre (projet AURA) mesure les constantes de l'astronaute et les envoie vers la Terre ; toute la surveillance se fait sur un site web (tableau de bord « AURA // HRP·OS »).
 
 Toutes les données sont **simulées** pour la démo. Les seuils sont **illustratifs**, ce ne sont **pas** des limites officielles NASA — ne jamais les présenter comme tels.
 

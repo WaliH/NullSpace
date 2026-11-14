@@ -4,14 +4,14 @@
 //
 //   php bin/simulate-watch.php                 → one batch every 5 s, nominal values
 //   php bin/simulate-watch.php --crisis        → Bravo's heart rate and blood pressure drift up
-//   php bin/simulate-watch.php --interval=2 --count=10 --url=http://localhost:8080
+//   php bin/simulate-watch.php --interval=2 --count=10 --url=http://localhost:8787
 //
 // Stop with Ctrl+C. Needs only PHP (no curl extension required).
 
 $config = require __DIR__ . '/../config.php';
 
 $opts = getopt('', ['url::', 'interval::', 'count::', 'crisis']);
-$baseUrl = rtrim($opts['url'] ?? 'http://localhost:8080', '/');
+$baseUrl = rtrim($opts['url'] ?? ('http://localhost:' . $config['port']), '/');
 $interval = max(1, (int) ($opts['interval'] ?? 5));
 $count = (int) ($opts['count'] ?? 0); // 0 = run until Ctrl+C
 $crisis = array_key_exists('crisis', $opts);

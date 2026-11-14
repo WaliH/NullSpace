@@ -1,5 +1,5 @@
 <?php
-// HTTP API of the AuraWatch backend.
+// HTTP API of the Project AURA backend.
 //
 //   GET  /api/health      → server and database check
 //   GET  /api/telemetry   → same JSON shape as frontend/data.json

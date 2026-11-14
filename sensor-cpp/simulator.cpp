@@ -1,4 +1,4 @@
-// AuraWatch — watch simulator in C++.
+// Project AURA — watch simulator in C++.
 //
 // Plays the role of the watch until the real hardware is ready: it generates measurements
 // for the two astronauts, checks them on board, keeps them in a local queue and sends them
@@ -88,7 +88,7 @@ struct Options {
 
 void print_help() {
     std::cout <<
-        "AuraWatch watch simulator (simulated data, illustrative thresholds)\n"
+        "Project AURA watch simulator (simulated data, illustrative thresholds)\n"
         "  --url=http://HOST:PORT   backend address (default http://localhost:8787)\n"
         "  --key=KEY                device key, X-Device-Key header (default aura-demo-key)\n"
         "  --interval=N             seconds between two batches (default 5)\n"
@@ -400,7 +400,7 @@ public:
         std::ostringstream req;
         req << "POST " << path << " HTTP/1.1\r\n"
             << "Host: " << host_ << ":" << port_ << "\r\n"
-            << "User-Agent: AuraWatch-Simulator\r\n"
+            << "User-Agent: AURA-Simulator\r\n"
             << "Content-Type: application/json\r\n"
             << "X-Device-Key: " << token_ << "\r\n"
             << "Content-Length: " << json.size() << "\r\n"

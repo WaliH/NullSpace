@@ -1,4 +1,4 @@
-# AuraWatch — code C++ de la montre
+# Project AURA — code C++ de la montre
 
 En attendant le vrai matériel, ce dossier contient un **simulateur de montre** en C++. Il génère des mesures pour les deux astronautes et les envoie au backend (`POST /api/readings`), comme le fera la vraie montre. C'est l'équivalent C++ de `backend-php\simulate-watch.bat` : mêmes options, mêmes valeurs, même API.
 

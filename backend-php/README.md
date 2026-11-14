@@ -1,4 +1,4 @@
-# AuraWatch — backend PHP (Windows)
+# Project AURA — backend PHP (Windows)
 
 Le backend reçoit les mesures envoyées par la montre, les enregistre dans une base SQLite et les renvoie au tableau de bord. Il sert aussi le site lui-même : un seul serveur à lancer.
 

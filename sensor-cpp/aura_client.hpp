@@ -1,4 +1,4 @@
-// AuraWatch — minimal HTTP client used to send measurements to the backend.
+// Project AURA — minimal HTTP client used to send measurements to the backend.
 //
 // Header-only, standard C++17 + sockets: Winsock on Windows, BSD sockets elsewhere.
 // No external library (no curl, no JSON library), so it compiles on any team PC.

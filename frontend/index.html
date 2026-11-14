@@ -200,6 +200,28 @@
           </div>
         </article>
 
+        <!-- Full-width card: 7th card, so it takes the whole last row instead of leaving 2 empty slots. -->
+        <article class="vital-card vital-card-wide" data-metric-id="radiation_dose" data-category="immuno">
+          <div class="card-glass-specular"></div>
+          <div class="card-meta">
+            <span class="sensor-tag">RAD-07 &bull; Space Radiation</span>
+            <span id="status-radiation_dose" class="status-badge nominal">Nominal</span>
+          </div>
+          <div class="vital-core">
+            <span class="vital-label">Daily Radiation Dose</span>
+            <div class="val-wrapper">
+              <span id="val-radiation_dose" class="vital-val">0.65</span>
+              <span class="vital-unit">mSv/day</span>
+            </div>
+          </div>
+          <div class="sparkline-container">
+            <svg class="sparkline-svg" viewBox="0 0 100 24" preserveAspectRatio="none">
+              <path class="sparkline-track" d="M0,14 L50,13 L100,14" />
+            </svg>
+            <span id="ref-radiation_dose" class="spark-label">Limit: &le; 1 mSv/day</span>
+          </div>
+        </article>
+
       </div>
 
       <div class="terminal-strip">

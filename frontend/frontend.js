@@ -421,8 +421,18 @@ function sparklinePoints(values) {
 // redrawn in orange (warning) or red (critical). So a spike stays colored as long as it is
 // visible in the graph, even after the current value is back to nominal.
 function drawSparkline(track, values, statuses) {
-  if (!values || values.length < 2) return;
-  const pts = sparklinePoints(values);
+  values = values || [];
+  statuses = statuses || [];
+  // Daily vitals (sleep, exercise, radiation) can have a single reading in the window:
+  // draw a flat line in that reading's colour. Never keep segments from a previous render.
+  let pts;
+  if (values.length >= 2) {
+    pts = sparklinePoints(values);
+  } else {
+    pts = [['0.0', '12.0'], ['100.0', '12.0']];
+    const s = statuses[0] || 'nominal';
+    statuses = [s, s];
+  }
   track.setAttribute('d', pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' '));
   track.style.stroke = '';
 

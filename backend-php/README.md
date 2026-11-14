@@ -26,15 +26,17 @@ Rien à faire : les scripts `.bat` trouvent automatiquement `C:\xampp\php\php.ex
 Double-cliquez sur **`start-server.bat`** (ou lancez-le dans le terminal de VS Code).
 
 - Au premier lancement, il crée la base `data\aurawatch.sqlite` à partir de `frontend\data.json`.
-- Tableau de bord : http://localhost:8080
-- Vérification de l'API : http://localhost:8080/api/health
+- Le navigateur s'ouvre tout seul sur le tableau de bord.
+- Le site n'a **ni identifiant ni mot de passe**. Si une fenêtre de connexion apparaît, c'est un autre programme qui répond sur ce port : voir « Problèmes fréquents ».
+- Tableau de bord : http://localhost:8787
+- Vérification de l'API : http://localhost:8787/api/health
 
 Arrêt : `Ctrl+C` dans la fenêtre du serveur.
 
 Équivalent en ligne de commande (PowerShell ou cmd, depuis `backend-php`) :
 ```
 php bin\seed.php
-php -S localhost:8080 -t ..\frontend router.php
+php -S localhost:8787 -t ..\frontend router.php
 ```
 
 ## 3. Simuler la montre (en attendant le matériel)
@@ -81,7 +83,7 @@ En-tête obligatoire : `X-Device-Key: aura-demo-key` (modifiable dans `config.ph
 Test rapide dans **PowerShell** :
 ```powershell
 $body = '{"astronaut_id":"AST-02","readings":[{"vital_id":"heart_rate","value":120}]}'
-Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/readings `
+Invoke-RestMethod -Method Post -Uri http://localhost:8787/api/readings `
   -Headers @{ "X-Device-Key" = "aura-demo-key" } -ContentType "application/json" -Body $body
 ```
 
@@ -105,7 +107,8 @@ backend-php/
 
 - **« PHP was not found »** : PHP n'est pas dans le Path, ou le terminal a été ouvert avant la modification. Fermez puis rouvrez VS Code.
 - **« pdo_sqlite is not enabled »** : voir l'étape 1.5. La commande `php --ini` indique quel `php.ini` est utilisé.
-- **Le port 8080 est déjà pris** : remplacez `8080` par `8090` dans `start-server.bat` (et utilisez `--url=http://localhost:8090` pour le simulateur).
-- **Le pare-feu Windows demande une autorisation** : acceptez pour les réseaux privés. C'est nécessaire si la vraie montre envoie ses données depuis un autre appareil. Dans ce cas, lancez le serveur avec `php -S 0.0.0.0:8080 ...` et utilisez l'adresse IP du PC.
+- **Une fenêtre demande un nom d'utilisateur et un mot de passe**, ou **« Port 8787 is already used »** : un autre programme (Tomcat de XAMPP, Oracle, Jenkins…) utilise ce port. Fermez-le, ou choisissez un autre port : changez `PORT` en haut de `start-server.bat` **et** `port` dans `config.php` (par exemple 8790).
+  Pour voir quel programme occupe un port : `netstat -ano | findstr :8787`, puis cherchez le PID (dernier nombre) dans le Gestionnaire des tâches, onglet « Détails ».
+- **Le pare-feu Windows demande une autorisation** : acceptez pour les réseaux privés. C'est nécessaire si la vraie montre envoie ses données depuis un autre appareil. Dans ce cas, lancez le serveur avec `php -S 0.0.0.0:8787 ...` et utilisez l'adresse IP du PC.
 
 Les données sont **simulées** et les seuils sont **illustratifs** : ce ne sont pas des limites officielles de la NASA.

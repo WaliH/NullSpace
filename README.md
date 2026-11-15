@@ -115,7 +115,7 @@ Project AURA is built on the resources of NASA's **Human Research Program (HRP)*
 
 ### NASA HRP — risks addressed by each vital
 
-Each card on the dashboard monitors a risk from the [HRP list of human health risks](https://www.nasa.gov/hrp/risks/), linked to one of the [5 hazards of human spaceflight](https://www.nasa.gov/hrp/hazards/). Click a card to see its risk and hazard in the dialog.
+Each card on the dashboard monitors a risk from the [HRP list of human health risks](https://www.nasa.gov/hrp/risks/), linked to one of the [5 hazards of human spaceflight](https://www.nasa.gov/hrp/hazards/). Click a card to see its risk and hazard details.
 
 | Dashboard card | HRP risk | Hazard |
 |---|---|---|
